@@ -1,0 +1,40 @@
+# Ignore VCS
+
+# Python virtualenvs and caches
+.venv
+__pycache__
+*.pyc
+*.pyo
+*.pyd
+*.egg-info
+dist
+build
+
+# Test and coverage artifacts
+.pytest_cache
+coverage.xml
+htmlcov
+
+# Large artifacts, logs, core dumps
+*.core
+qemu_*
+qemu_devskim_*
+server.log
+*.log
+
+# Megalinter / linter reports
+megalinter-reports
+
+# Docker artifacts
+Dockerfile.*
+
+# Node artifacts
+node_modules
+
+# Project local data and secrets
+secrets
+data
+
+# IDE/editor
+.vscode
+.idea

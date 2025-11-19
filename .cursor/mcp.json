@@ -1,0 +1,7 @@
+{
+  "mcpServers": {
+    "mcp-browser-use-server": {
+      "url": "http://localhost:8081/sse"
+    }
+  }
+}

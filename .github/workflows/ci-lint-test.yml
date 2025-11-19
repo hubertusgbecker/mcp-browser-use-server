@@ -1,0 +1,43 @@
+---
+name: CI Lint & Test
+
+on:
+  push:
+    branches: ['main']
+  pull_request:
+    branches: ['main']
+
+jobs:
+  lint-and-test:
+    name: Lint and Test
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: ['3.11']
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up uv
+        uses: astral-sh/setup-uv@e58605a9b6da7c637471fab8847a5e5a6b8df081
+        with:
+          enable-cache: true
+          python-version: ${{ matrix.python-version }}
+
+      - name: Install dependencies
+        run: |
+          uv venv
+          uv pip install --upgrade pip
+          uv sync --all-extras
+          # Ensure the local package and test extras are installed so pytest.ini addopts work
+          uv pip install .[test]
+
+      - name: Run ruff check
+        run: uv run ruff check .
+
+      - name: Run tests (fast)
+        run: |
+          # Run the fast test suite (same as `./run_tests.sh fast`)
+          # Requires `uv` which is set up earlier in this job
+          uv run pytest -m "not slow" tests/

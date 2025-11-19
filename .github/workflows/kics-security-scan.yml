@@ -1,0 +1,264 @@
+name: KICS Security Scan
+
+on:
+  # Run weekly on Mondays at 6 AM UTC
+  schedule:
+    - cron: '0 6 * * 1'
+  
+  # Allow manual trigger
+  workflow_dispatch:
+  
+  # Run on pushes to main (for testing)
+  push:
+    branches:
+      - main
+    paths:
+      - 'Dockerfile'
+      - 'docker-compose.yaml'
+      - '.github/workflows/kics-security-scan.yml'
+      - '.kics.config'
+
+permissions:
+  contents: write
+  pull-requests: write
+  security-events: write
+  issues: write
+
+jobs:
+  kics-scan:
+    name: KICS Security Scan
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      
+      - name: Create results directory
+        run: mkdir -p kics-output
+      
+      - name: Build Docker image for Trivy scan
+        id: create_image
+        run: |
+          # Build a local image to scan. Use a deterministic tag for the run.
+          IMAGE_TAG="mcp-browser-use-server:scan-${{ github.run_id }}"
+          docker build -t "$IMAGE_TAG" .
+          echo "image_tag=$IMAGE_TAG" >> $GITHUB_OUTPUT
+        continue-on-error: true
+      
+      - name: Run Trivy container/image scan (docker)
+        id: trivy
+        run: |
+          mkdir -p trivy-output
+          IMAGE_TAG=${{ steps.create_image.outputs.image_tag }}
+          echo "Scanning image: $IMAGE_TAG"
+          # Pull latest trivy image and run scan against local image
+          docker run --rm -v /var/run/docker.sock:/var/run/docker.sock \
+            -v "$PWD/trivy-output":/tmp/trivy-output aquasecurity/trivy:latest \
+            image --format json --output /tmp/trivy-output/results.json --severity CRITICAL,HIGH "$IMAGE_TAG" || true
+        continue-on-error: true
+      
+      - name: Run KICS Scan
+        uses: checkmarx/kics-github-action@v2.1.2
+        with:
+          path: '.'
+          config_path: '.kics.config'
+          output_path: 'kics-output'
+          output_formats: 'json,sarif'
+          fail_on: 'high'
+          enable_comments: false
+        continue-on-error: true
+      
+      - name: Analyze Combined Results (KICS + Trivy)
+        id: analyze
+        if: always()
+        run: |
+          # Initialize counters
+          KICS_HIGH=0
+          KICS_CRITICAL=0
+          KICS_MEDIUM=0
+          KICS_TOTAL=0
+
+          if [ -f kics-output/results.json ]; then
+            KICS_HIGH=$(jq '.severity_counters.HIGH // 0' kics-output/results.json)
+            KICS_CRITICAL=$(jq '.severity_counters.CRITICAL // 0' kics-output/results.json)
+            KICS_MEDIUM=$(jq '.severity_counters.MEDIUM // 0' kics-output/results.json)
+            KICS_TOTAL=$(jq '.total_counter' kics-output/results.json)
+          fi
+
+          TRIVY_HIGH=0
+          TRIVY_CRITICAL=0
+          TRIVY_TOTAL=0
+          if [ -f trivy-output/results.json ]; then
+            # Trivy JSON schema: .Results[].Vulnerabilities[] | .Severity
+            TRIVY_HIGH=$(jq '[.[]?.Vulnerabilities[]? | select(.Severity=="HIGH")] | length' trivy-output/results.json)
+            TRIVY_CRITICAL=$(jq '[.[]?.Vulnerabilities[]? | select(.Severity=="CRITICAL")] | length' trivy-output/results.json)
+            TRIVY_TOTAL=$(jq '[.[]?.Vulnerabilities[]?] | length' trivy-output/results.json)
+          fi
+
+          TOTAL_HIGH=$((KICS_HIGH + TRIVY_HIGH))
+          TOTAL_CRITICAL=$((KICS_CRITICAL + TRIVY_CRITICAL))
+          TOTAL_MEDIUM=$((KICS_MEDIUM))
+          TOTAL_ALL=$((KICS_TOTAL + TRIVY_TOTAL))
+
+          echo "kics_high=$KICS_HIGH" >> $GITHUB_OUTPUT
+          echo "kics_critical=$KICS_CRITICAL" >> $GITHUB_OUTPUT
+          echo "trivy_high=$TRIVY_HIGH" >> $GITHUB_OUTPUT
+          echo "trivy_critical=$TRIVY_CRITICAL" >> $GITHUB_OUTPUT
+          echo "total_high=$TOTAL_HIGH" >> $GITHUB_OUTPUT
+          echo "total_critical=$TOTAL_CRITICAL" >> $GITHUB_OUTPUT
+          echo "total_medium=$TOTAL_MEDIUM" >> $GITHUB_OUTPUT
+          echo "total_all=$TOTAL_ALL" >> $GITHUB_OUTPUT
+
+          if [ "$TOTAL_HIGH" -gt 0 ] || [ "$TOTAL_CRITICAL" -gt 0 ]; then
+            echo "needs_fix=true" >> $GITHUB_OUTPUT
+          else
+            echo "needs_fix=false" >> $GITHUB_OUTPUT
+          fi
+      
+      - name: Display Results Summary
+        if: always()
+        run: |
+          echo "## KICS Security Scan Results" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          
+          if [ -f kics-output/results.json ]; then
+            echo "### Severity Counters" >> $GITHUB_STEP_SUMMARY
+            echo '```json' >> $GITHUB_STEP_SUMMARY
+            jq '.severity_counters' kics-output/results.json >> $GITHUB_STEP_SUMMARY
+            echo '```' >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "**KICS Total Issues:** ${{ steps.analyze.outputs.total_all }}" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "### Combined KICS + Trivy Summary" >> $GITHUB_STEP_SUMMARY
+            echo '```json' >> $GITHUB_STEP_SUMMARY
+            printf '{"kics_high": %s, "kics_critical": %s, "trivy_high": %s, "trivy_critical": %s, "total_high": %s, "total_critical": %s, "total_all": %s}' "${{ steps.analyze.outputs.kics_high }}" "${{ steps.analyze.outputs.kics_critical }}" "${{ steps.analyze.outputs.trivy_high }}" "${{ steps.analyze.outputs.trivy_critical }}" "${{ steps.analyze.outputs.total_high }}" "${{ steps.analyze.outputs.total_critical }}" "${{ steps.analyze.outputs.total_all }}" >> $GITHUB_STEP_SUMMARY
+            echo '```' >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            if [ "${{ steps.analyze.outputs.needs_fix }}" = "true" ]; then
+              echo "" >> $GITHUB_STEP_SUMMARY
+              echo "⚠️ **Action Required:** HIGH or CRITICAL security issues found by KICS or Trivy!" >> $GITHUB_STEP_SUMMARY
+            else
+              echo "" >> $GITHUB_STEP_SUMMARY
+              echo "✅ **No HIGH or CRITICAL issues found by KICS or Trivy!**" >> $GITHUB_STEP_SUMMARY
+            fi
+          else
+            echo "❌ No results file found" >> $GITHUB_STEP_SUMMARY
+          fi
+      
+      - name: Upload KICS Results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: kics-results-${{ github.run_number }}
+          path: kics-output/
+          retention-days: 30
+      
+      - name: Upload Trivy Results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: trivy-results-${{ github.run_number }}
+          path: trivy-output/
+          retention-days: 30
+      
+      - name: Upload SARIF to Security
+        if: always() && hashFiles('kics-output/results.sarif') != ''
+        uses: github/codeql-action/upload-sarif@v4
+        with:
+          sarif_file: kics-output/results.sarif
+          category: kics
+        continue-on-error: true
+      
+      - name: Create Fix Branch and Report
+        if: steps.analyze.outputs.needs_fix == 'true'
+        id: create_fix
+        run: |
+          BRANCH_NAME="kics-security-fixes-$(date +%Y%m%d-%H%M%S)"
+          echo "branch_name=$BRANCH_NAME" >> $GITHUB_OUTPUT
+          
+          git config --global user.name 'github-actions[bot]'
+          git config --global user.email 'github-actions[bot]@users.noreply.github.com'
+          git checkout -b "$BRANCH_NAME"
+          
+          # Create detailed findings report
+          cat > KICS_FINDINGS.md << 'EOFMARKER'
+          # KICS Security Scan Findings
+          
+          This file contains security issues found by automated KICS scan.
+          
+          ## Summary
+          
+          - **Critical Issues:** ${{ steps.analyze.outputs.critical_count }}
+          - **High Issues:** ${{ steps.analyze.outputs.high_count }}
+          - **Medium Issues:** ${{ steps.analyze.outputs.medium_count }}
+          - **Total Issues:** ${{ steps.analyze.outputs.total_count }}
+          - **Scan Date:** $(date -u)
+          
+          ## Detailed Findings
+          
+          EOFMARKER
+          
+          # Add detailed query results
+          jq -r '.queries[] | "### \(.query_name)\n\n- **Severity:** \(.severity)\n- **Platform:** \(.platform)\n- **Description:** \(.description)\n- **CWE:** \(.cwe)\n- **Query ID:** \(.query_id)\n- **Documentation:** \(.query_url)\n\n#### Affected Files:\n\n" + (.files[] | "- `\(.file_name)` (Line \(.line))\n  - **Issue:** \(.actual_value)\n  - **Expected:** \(.expected_value)\n\n") + "\n---\n\n"' kics-output/results.json >> KICS_FINDINGS.md || echo "Could not parse findings"
+          
+          # Append Trivy summary if available
+          if [ -f trivy-output/results.json ]; then
+            echo "\n## Trivy Image Scan Findings\n" >> KICS_FINDINGS.md
+            jq -r '.[]?.Vulnerabilities[]? | "- [\(.Severity)] \(.PkgName) \(.InstalledVersion) -> \(.FixedVersion // "(none)") (Title: \(.Title))"' trivy-output/results.json >> KICS_FINDINGS.md || true
+          fi
+          
+          git add KICS_FINDINGS.md
+          git commit -m "docs: Add KICS security scan findings report" \
+                     -m "Automated scan detected ${{ steps.analyze.outputs.critical_count }} CRITICAL and ${{ steps.analyze.outputs.high_count }} HIGH severity issues." \
+                     -m "Review KICS_FINDINGS.md for details."
+          git push origin "$BRANCH_NAME"
+      
+      - name: Create Pull Request
+        if: steps.analyze.outputs.needs_fix == 'true'
+        uses: peter-evans/create-pull-request@v6
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          branch: ${{ steps.create_fix.outputs.branch_name }}
+          title: '🔒 Security: KICS found HIGH/CRITICAL issues - Fix Required'
+          body: |
+            ## 🔒 KICS Security Alert
+            
+            Automated KICS scan detected **HIGH or CRITICAL** severity security issues.
+            
+            ### 📊 Summary
+            
+            - **Critical:** ${{ steps.analyze.outputs.critical_count }}
+            - **High:** ${{ steps.analyze.outputs.high_count }}
+            - **Medium:** ${{ steps.analyze.outputs.medium_count }}
+            - **Total:** ${{ steps.analyze.outputs.total_count }}
+            
+            ### 📋 Actions Required
+            
+            1. Review `KICS_FINDINGS.md` for detailed findings
+            2. Fix the identified security issues
+            3. Update `.kics.config` if any findings are false positives (with rationale)
+            4. Re-run KICS scan to verify fixes
+            
+            ### 🔗 Resources
+            
+            - [View SARIF in Security Tab](${{ github.server_url }}/${{ github.repository }}/security/code-scanning)
+            - [KICS Documentation](https://docs.kics.io/)
+            - [Workflow Run](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }})
+            
+            ---
+            
+            🤖 *Auto-generated by KICS Security Scan workflow*
+          labels: |
+            security
+            automated
+            kics
+            high-priority
+          assignees: ${{ github.repository_owner }}
+      
+      - name: Report Success
+        if: steps.analyze.outputs.needs_fix == 'false'
+        run: |
+          echo "✅ KICS scan completed successfully!"
+          echo "No HIGH or CRITICAL security issues found."

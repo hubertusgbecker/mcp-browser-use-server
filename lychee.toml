@@ -1,0 +1,15 @@
+# lychee configuration for repo link checking
+# Exclude local-only URLs and known non-production links that fail in CI/local
+exclude = [
+  "^http://localhost:.*",
+  "^https?://localhost:.*",
+  "^http://127\\.0\\.0\\.1:.*",
+  "^https?://127\\.0\\.0\\.1:.*",
+  "^https://github.com/.*/discussions",
+  "^https://github.com/.*/discussions/.*"
+]
+
+# Exclude specific paths from being scanned (regex)
+exclude_path = [
+  ".*\\.github\\/workflows\\/.*"
+]

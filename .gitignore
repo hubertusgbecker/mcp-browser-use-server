@@ -1,0 +1,66 @@
+## Python virtual environments
+.venv/
+venv/
+env/
+
+## Byte-compiled / cache
+**/__pycache__/
+**/*.py[cod]
+*$py.class
+
+## Environment / secrets
+# Local environment variables with secrets
+.env
+TODO.md
+.env.*
+!*.env.example
+
+secrets/*
+!secrets/.gitkeep
+
+## Data directory (Docker volumes)
+data/*
+!data/.gitkeep
+
+## Packaging / distribution
+dist/
+build/
+*.egg-info/
+pip-wheel-metadata/
+
+## Test output / coverage
+.coverage
+coverage.xml
+htmlcov/
+.pytest_cache/
+
+## Tool caches
+.ruff_cache/
+.mypy_cache/
+.cache/
+.nox/
+
+## IDEs and editors
+.vscode/
+.idea/
+*.sublime-project
+*.sublime-workspace
+
+## OS files
+.DS_Store
+
+## Misc
+repomix-output.*
+*.log
+megalinter-reports/
+
+# KICS / scan output (local)
+kics-output/
+.kics-output/
+.kics-output
+trivy-output/
+
+# Ignore core dumps and qemu artifacts created during CI/linting runs
+core
+*.core
+qemu*

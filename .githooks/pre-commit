@@ -1,0 +1,82 @@
+#!/usr/bin/env bash
+# Simple pre-commit hook to run ruff formatting and checks.
+set -euo pipefail
+
+echo "Running ruff format..."
+uv run ruff format . || {
+    echo "ruff format failed" >&2
+    exit 1
+}
+
+echo "Running ruff check..."
+uv run ruff check . --fix || {
+    echo "ruff check reported issues" >&2
+    exit 1
+}
+
+echo "Staging any changes made by ruff format..."
+git add -A || true
+
+echo "Pre-commit checks passed."
+
+exit 0
+#!/usr/bin/env bash
+# Run ruff lint checks before commit. Exits non-zero on failures.
+set -euo pipefail
+
+echo "Running ruff checks before commit..."
+
+# Prefer project uv wrapper if available
+if command -v uv >/dev/null 2>&1; then
+	uv run ruff check . || {
+		echo "ruff found issues. Run 'uv run ruff format .' to auto-format or fix manually." >&2
+		exit 1
+	}
+else
+	echo "Warning: 'uv' not found in PATH. Skipping ruff pre-commit check." >&2
+fi
+
+echo "ruff checks passed. Proceeding with commit."
+#!/usr/bin/env bash
+# Pre-commit hook to block adding duplicate or misspelled test filenames.
+set -eu
+
+# Get list of staged files
+staged_files=$(git diff --cached --name-only --diff-filter=ACM)
+
+if [ -z "$staged_files" ]; then
+	exit 0
+fi
+
+# Use a temporary file to track normalized names (POSIX-safe)
+tmpfile=$(mktemp)
+trap 'rm -f "$tmpfile"' EXIT
+
+for f in $staged_files; do
+	# Only check test files under tests/
+	case "$f" in
+	tests/*.py)
+		name=$(basename "$f")
+		# Normalize: lowercase, remove non-alphanum
+		norm=$(echo "$name" | tr '[:upper:]' '[:lower:]' | tr -cd '[:alnum:]')
+
+		# Check for obvious misspelling 'interation'
+		if echo "$name" | grep -qi "interation"; then
+			echo "Error: test filename '$f' contains 'interation' (possible misspelling of 'integration')."
+			echo "Please rename to 'integration' and try again."
+			exit 1
+		fi
+
+		if grep -xq "$norm" "$tmpfile" 2>/dev/null; then
+			echo "Error: Duplicate-ish test filename detected: '$f' (normalizes to '$norm')"
+			echo "Please rename to avoid ambiguous test filenames."
+			exit 1
+		fi
+
+		echo "$norm" >>"$tmpfile"
+		;;
+	*) ;;
+	esac
+done
+
+exit 0

@@ -1,0 +1,13 @@
+#!/bin/sh
+# Simple uvx shim that forwards to the project's `uv` executable in the venv.
+# This helps `browser_use` subprocesses that expect an `uvx` helper.
+UV="$(pwd)/.venv/bin/uv"
+if [ -x "$UV" ]; then
+  exec "$UV" "$@"
+fi
+# Fallback to system `uv` if present
+if command -v uv >/dev/null 2>&1; then
+  exec uv "$@"
+fi
+echo "uvx shim: could not find 'uv' to forward to" >&2
+exit 127

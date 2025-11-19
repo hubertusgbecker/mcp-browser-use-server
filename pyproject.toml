@@ -1,0 +1,103 @@
+[project]
+name = "mcp-browser-use-server"
+dynamic = ["version"]
+description = "MCP browser-use server library"
+readme = "README.md"
+requires-python = ">=3.11,<4.0"
+license = {text = "MIT"}
+authors = [
+    {name = "Dr. Hubertus Becker", email = "contact@hubertusbecker.com"}
+]
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "Operating System :: OS Independent",
+]
+dependencies = [
+    "asyncio>=3.4.3",
+    "browser-use>=0.9.5",
+    "click>=8.1.8",
+    "httpx>=0.28.1",
+    "langchain-openai>=0.3.1",
+    "mcp>=1.3.0",
+    "pydantic>=2.10.6",
+    "anyio",
+    "python-dotenv",
+    "python-json-logger>=2.0.7",
+    "starlette",
+    "uvicorn",
+    "playwright>=1.50.0",
+    "ruff>=0.5.5",
+]
+
+[project.optional-dependencies]
+# Dependencies for running tests
+test = [
+    "pytest>=7.0.0",
+    "pytest-asyncio>=0.21.0",
+    "pytest-cov>=4.1.0",
+    "python-dotenv>=0.21.0",
+]
+# Dependencies for development (includes test dependencies)
+dev = [
+    "mcp-browser-use-server[test]",
+    "ruff>=0.5.5",
+    "mypy>=1.18.2",
+]
+
+[project.urls]
+"Homepage" = "https://github.com/hubertusgbecker/mcp-browser-use-server"
+"Bug Tracker" = "https://github.com/hubertusgbecker/mcp-browser-use-server/issues"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+python_files = "test_*.py"
+asyncio_mode = "auto"
+asyncio_default_fixture_loop_scope = "function"
+
+[project.scripts]
+mcp-browser-use-server = "mcp_browser_use_server.cli:cli"
+mcp-browser-use-cli = "mcp_browser_use_server.cli:cli"
+test-fast = "mcp_browser_use_server.test_scripts:fast"
+
+[build-system]
+requires = ["hatchling", "uv-dynamic-versioning"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build]
+include = ["src/mcp_browser_use_server", "server"]
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/mcp_browser_use_server", "server"]
+
+[tool.hatch.version]
+source = "uv-dynamic-versioning"
+
+[tool.uv-dynamic-versioning]
+vcs = "git"
+style = "pep440"
+bump = true
+
+[tool.ruff]
+line-length = 80
+target-version = "py311"
+
+[tool.ruff.lint]
+# Enable common Pyflakes, pycodestyle, and isort rules
+select = ["E", "F", "W", "I"]
+# Ignore line length violations in comments, docstrings, and string literals
+extend-ignore = ["E501"]
+
+# Exclude string literals and comments from line length checks
+
+[tool.ruff.format]
+# Use black-compatible formatting
+quote-style = "double"
+
+[tool.flake8]
+max-line-length = 80
+# Ignore long-line E501 already handled by ruff/formatting
+extend-ignore = ["E501"]
+# Ignore unused-assigned variables in tests (common test pattern)
+per-file-ignores = [
+    "tests/*: F841",
+]

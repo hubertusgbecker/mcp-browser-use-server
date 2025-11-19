@@ -1,0 +1,203 @@
+---
+services:
+  # Main MCP Browser Use Server
+  mcp-browser-use-server:
+    image: mcp-browser-use-server
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: ${CONTAINER_NAME:-mcp-browser-use-server}
+    # Service ports
+    ports:
+      # SSE server port (bound to localhost)
+      - "127.0.0.1:${HOST_PORT:-8081}:8081"
+      # VNC port for browser visualization (host:container)
+      - "127.0.0.1:${VNC_HOST_PORT:-5902}:5900"
+    env_file:
+      - ./.env
+    environment:
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
+      - LLM_MODEL=${LLM_MODEL:-gpt-4o-mini}
+      - CHROME_PATH=${CHROME_PATH:-}
+      - PATIENT=${PATIENT:-false}
+      - LOG_LEVEL=${LOG_LEVEL:-INFO}
+      - PYTHONUNBUFFERED=1
+      - BROWSER_HEADLESS=${BROWSER_HEADLESS:-true}
+    volumes:
+      # Mount .env file if it exists
+      - ./.env:/app/.env:ro
+      # Persist browser data
+      - data:/root/.cache
+      # VNC password from secrets or default
+        # VNC password is provided via Docker secrets (no host-volume mapping)
+    secrets:
+      - vnc_password
+    networks:
+      - mcp-network
+    restart: unless-stopped
+    security_opt:
+      - no-new-privileges:true
+    # Avoid adding unnecessary capabilities; keep default safe capability set
+    cap_add: []
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8081/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  # Development server with hot reload
+  mcp-browser-use-dev-server:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: builder
+    container_name: ${DEV_CONTAINER_NAME:-mcp-dev-server}
+    env_file:
+      - ./.env
+    ports:
+      - "127.0.0.1:${DEV_HOST_PORT:-8001}:8081"
+      # Different port for dev (bound to localhost)
+      - "127.0.0.1:${DEV_VNC_HOST_PORT:-5901}:5900"
+      # Different VNC port for dev
+    environment:
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
+      - CHROME_PATH=${CHROME_PATH:-}
+      - PATIENT=${PATIENT:-false}
+      - LOG_LEVEL=${LOG_LEVEL:-DEBUG}
+      - PYTHONUNBUFFERED=1
+    volumes:
+      - .:/app
+      - ./.env:/app/.env:ro
+      - dev-data:/root/.cache
+    networks:
+      - mcp-network
+    profiles:
+      - dev
+      security_opt:
+        - no-new-privileges:true
+      cap_add: []
+      healthcheck:
+        test: ["CMD", "curl", "-f", "http://localhost:8081/health"]
+        interval: 30s
+        timeout: 10s
+        retries: 3
+        start_period: 40s
+    command: ["uv", "run", "server", "--port", "8081"]
+
+  # Proxy for stdio mode (optional)
+  mcp-browser-use-proxy:
+    image: node:20-slim
+    container_name: ${PROXY_CONTAINER_NAME:-mcp-proxy}
+    ports:
+      - "127.0.0.1:${PROXY_PORT:-9000}:9000"
+      # Proxy port bound to localhost
+    env_file:
+      - ./.env
+    environment:
+      - PROXY_PORT=${PROXY_PORT:-9000}
+      - TARGET_HOST=${PROXY_TARGET_HOST:-mcp-browser-use-server}
+      - TARGET_PORT=${PROXY_TARGET_PORT:-8081}
+    networks:
+      - mcp-network
+    profiles:
+      - stdio
+      security_opt:
+        - no-new-privileges:true
+      cap_add: []
+      healthcheck:
+        test: ["CMD", "curl", "-f", "http://localhost:9000/health || true"]
+        interval: 30s
+        timeout: 10s
+        retries: 3
+        start_period: 40s
+      command: >
+        sh -c "npm install -g mcp-proxy@1.2.0 && \
+        mcp-proxy --port 9000 --target http://mcp-browser-use-server:8081"
+
+  # Monitoring with Prometheus (optional)
+  mcp-browser-use-prometheus:
+    image: prom/prometheus:v2.48.0
+    container_name: ${PROMETHEUS_CONTAINER_NAME:-mcp-browser-use-mcp-prometheus}
+    ports:
+      - "127.0.0.1:${PROMETHEUS_PORT:-9090}:9090"
+    volumes:
+      - ./monitoring/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - prometheus-data:/prometheus
+    networks:
+      - mcp-network
+    profiles:
+      - monitoring
+      security_opt:
+        - no-new-privileges:true
+      cap_add: []
+      healthcheck:
+        test: ["CMD", "curl", "-f", "http://localhost:9090/-/ready || true"]
+        interval: 30s
+        timeout: 10s
+        retries: 3
+        start_period: 40s
+    command:
+      - "--config.file=/etc/prometheus/prometheus.yml"
+      - "--storage.tsdb.path=/prometheus"
+      - "--web.console.libraries=/usr/share/prometheus/console_libraries"
+      - "--web.console.templates=/usr/share/prometheus/consoles"
+
+  # Grafana for visualization (optional)
+  grafana:
+    image: grafana/grafana:10.0.3
+    container_name: ${GRAFANA_CONTAINER_NAME:-mcp-browser-use-grafana}
+    ports:
+      - "127.0.0.1:${GRAFANA_PORT:-3000}:3000"
+    env_file:
+      - ./.env
+    environment:
+      - GF_SECURITY_ADMIN_USER=${GRAFANA_USER:-admin}
+      # Admin password must be provided via env or secrets at deploy time
+      - GF_SECURITY_ADMIN_PASSWORD=${GRAFANA_PASSWORD}
+      - GF_USERS_ALLOW_SIGN_UP=false
+    volumes:
+      - grafana-data:/var/lib/grafana
+      - grafana_dashboards:/etc/grafana/provisioning/dashboards:ro
+      - grafana_datasources:/etc/grafana/provisioning/datasources:ro
+    networks:
+      - mcp-network
+    profiles:
+      - monitoring
+    depends_on:
+      - mcp-browser-use-prometheus
+      security_opt:
+        - no-new-privileges:true
+      cap_add: []
+      healthcheck:
+        test: ["CMD", "curl", "-f", "http://localhost:3000/api/health || true"]
+        interval: 30s
+        timeout: 10s
+        retries: 3
+        start_period: 40s
+
+volumes:
+  data:
+    driver: local
+  dev-data:
+    driver: local
+  prometheus-data:
+    driver: local
+  grafana-data:
+    driver: local
+  grafana_dashboards:
+    driver: local
+  grafana_datasources:
+    driver: local
+
+networks:
+  mcp-network:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: ${DOCKER_SUBNET:-172.21.0.0/16}
+
+secrets:
+  vnc_password:
+    file: ./secrets/vnc_password.txt
+    # Fallback: create ./secrets/vnc_password.txt with your VNC password

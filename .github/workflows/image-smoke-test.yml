@@ -1,0 +1,73 @@
+name: Docker Image Smoke Test
+
+on:
+  push:
+    branches: ['main']
+  pull_request:
+    branches: ['main']
+  workflow_dispatch: {}
+
+jobs:
+  fast-tests:
+    name: Fast unit tests
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+
+      - name: Create venv and install test deps
+        run: |
+          python -m venv .venv
+          .venv/bin/pip install --upgrade pip
+          # Install pytest and plugins required by pytest.ini addopts
+          .venv/bin/pip install pytest pytest-cov pytest-asyncio
+          # Install the project and test extras so tests can import dependencies
+          .venv/bin/pip install .[test]
+
+      - name: Run unit tests
+        run: |
+          .venv/bin/pytest tests/test_server.py -q
+
+  smoke:
+    name: Build image and smoke test
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Build Docker image
+        run: docker build -t mcp-browser-use-server:ci .
+
+      - name: Run container
+        env:
+          # Provide a dummy OpenAI API key for container startup tests
+          OPENAI_API_KEY: "test-api-key-ci"
+        run: |
+          docker run -d --name mcp-ci -p 127.0.0.1:8081:8081 \
+            -e OPENAI_API_KEY="$OPENAI_API_KEY" \
+            mcp-browser-use-server:ci || (docker logs mcp-ci || true; exit 1)
+
+      - name: Wait for /health
+        run: |
+          for i in $(seq 1 60); do
+            if curl -sS -f http://127.0.0.1:8081/health >/dev/null 2>&1; then
+              exit 0
+            fi
+            sleep 1
+          done
+          docker logs mcp-ci || true
+          docker rm -f mcp-ci || true
+          exit 1
+
+      - name: Stop container
+        if: always()
+        run: docker rm -f mcp-ci || true
+
+      - name: Remove image
+        if: always()
+        run: docker rmi mcp-browser-use-server:ci || true

@@ -1,0 +1,5 @@
+---
+exclude_dirs:
+  - .venv
+  - tests
+# You can later add 'skips' or severity thresholds here.

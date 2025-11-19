@@ -1,0 +1,45 @@
+# MegaLinter configuration
+# Minimal, single-document YAML configuration for MegaLinter.
+# See: https://megalinter.io/latest/config-file/
+
+# all, none, or list of linter keys
+APPLY_FIXES: all
+
+# If you use ENABLE variable, all other languages/formats/tooling-formats will
+# be disabled by default
+# ENABLE:
+
+# If you use ENABLE_LINTERS variable, all other linters will be disabled by
+# default
+# ENABLE_LINTERS:
+
+# Disable linters that conflict with our maintenance-first approach
+DISABLE:
+  - COPYPASTE  # Disable jscpd - code duplication is acceptable in our context
+DISABLE_LINTERS:
+  - REPOSITORY_CHECKOV  # Disable checkov - similar to KICS, has pinning requirements
+  - REPOSITORY_DEVSKIM  # Disable devskim - reports similar security false positives
+
+SHOW_ELAPSED_TIME: true
+
+# Uncomment if you want MegaLinter to detect errors but not block CI to pass
+# DISABLE_ERRORS: true
+
+# Exclude common large/generated directories and file patterns from linting.
+# Use the schema-supported regex filter instead of the non-standard keys.
+FILTER_REGEX_EXCLUDE: >
+  (node_modules|megalinter-reports|\.venv|\.cache)
+
+# Configure KICS to use the repository .kics.config and exclude specific queries
+# We exclude queries that are false positives or don't align with our maintenance approach
+REPOSITORY_KICS_ARGUMENTS: "--config .kics.config"
+
+# Exclude specific file patterns for MegaLinter
+EXCLUDE_FILES:
+  - "**/node_modules/**"
+  - "**/megalinter-reports/**"
+  - "**/.venv/**"
+  - "**/.cache/**"
+
+# Exclude tests from Bandit using the schema-approved property (regex string).
+PYTHON_BANDIT_FILTER_REGEX_EXCLUDE: "tests/.*"
