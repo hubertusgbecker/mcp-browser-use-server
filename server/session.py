@@ -93,7 +93,7 @@ async def close_session(session_id: str) -> bool:
     session = session_data["session"]
 
     try:
-        await session.close()
+        await session.stop()
         logger.info(f"Closed browser session {session_id}")
     except Exception as e:
         logger.error(f"Error closing session {session_id}: {e}")

@@ -18,14 +18,14 @@ The MCP Browser Use Server provides a robust, production-ready interface for AI 
 
 ### Key Features
 
-- 🌐 **Browser Automation**: Full browser control through AI agents
-- 🔄 **Dual Transport**: SSE and stdio protocol support
-- 📺 **VNC Streaming**: Real-time browser visualization
-- ⚡ **Async Tasks**: Non-blocking browser operations
-- 🐳 **Docker Support**: Containerized deployment with docker-compose
- - 🔁 **Persistent Sessions**: Long-lived browser sessions with live inspection, tab control and content extraction (see `server/session.py`)
-- 🧪 **Comprehensive Tests**: Industry-ready test suite with 95%+ coverage
-- 🔒 **Production Ready**: Robust error handling and resource management
+- **Browser Automation**: Full browser control through AI agents
+- **Dual Transport**: SSE and stdio protocol support
+- **VNC Streaming**: Real-time browser visualization
+- **Async Tasks**: Non-blocking browser operations
+- **Docker Support**: Containerized deployment with docker-compose
+- **Persistent Sessions**: Long-lived browser sessions with live inspection, tab control and content extraction (see `server/session.py`)
+- **Comprehensive Tests**: Industry-ready test suite with 95%+ coverage
+- **Production Ready**: Robust error handling and resource management
 
 ## Quick Start
 

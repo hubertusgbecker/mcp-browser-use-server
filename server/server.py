@@ -38,7 +38,6 @@ import uvicorn
 from browser_use import Agent
 from browser_use.browser import BrowserProfile
 from dotenv import load_dotenv
-from langchain_core.language_models import BaseLanguageModel
 
 if TYPE_CHECKING:
     # Provide minimal type stubs for static checking to avoid importing
@@ -83,16 +82,10 @@ else:
             pass
 
 
-# LLM provider
+# LLM provider - use browser-use's native ChatOpenAI for v0.9.7+
 from types import SimpleNamespace
 
-from langchain_openai import ChatOpenAI
-
-# Keep a minimal provider attribute to maintain compatibility with code that
-# inspects `llm.provider` during initialization. Avoid adding method shims
-# globally — we use an adapter for async compatibility instead.
-if not hasattr(ChatOpenAI, "provider"):
-    setattr(ChatOpenAI, "provider", "openai")
+from browser_use.llm import ChatOpenAI
 
 
 from typing import cast
@@ -410,130 +403,16 @@ class ChatOpenAIAdapter:
 
 
 def ensure_llm_adapter(llm: Optional[Any]) -> Optional[Any]:
-    """Wrap known LLM implementations with adapter where needed.
+    """Return LLM instance directly - browser-use v0.9.7+ handles its own ChatOpenAI.
 
-    Currently wraps `ChatOpenAI` instances to provide compatibility.
+    In v0.9.7+, browser-use provides its own ChatOpenAI that is specifically
+    designed for browser automation with proper structured output handling.
+    No adapter/wrapper needed.
     """
     if llm is None:
         return None
 
-    if isinstance(llm, ChatOpenAI):
-        # Use a minimal direct OpenAI-backed adapter that accepts dict messages
-        # from browser-use and converts them to OpenAI REST format
-        class MinimalOpenAIAdapter:
-            def __init__(
-                self, model_name: str, api_key: str, base_url: str = ""
-            ):
-                self.model = model_name
-                self.model_name = model_name  # browser-use expects this
-                self.api_key = api_key
-                self.base_url = (
-                    base_url if base_url else "https://api.openai.com/v1"
-                )
-                # browser-use expects these attributes
-                self.provider = "openai"
-
-            async def ainvoke(self, *args, **kwargs):
-                """Accept messages and invoke OpenAI API - required by
-                browser-use token_cost_service.
-                """
-                # Handle different call patterns from browser-use
-                messages = args[0] if args else kwargs.get("messages", [])
-
-                # Normalize messages to list of dicts format
-                if not isinstance(messages, list):
-                    messages = [{"role": "user", "content": str(messages)}]
-                else:
-                    # Convert LangChain message objects to dict format
-                    normalized = []
-                    for msg in messages:
-                        if isinstance(msg, dict):
-                            normalized.append(msg)
-                        elif hasattr(msg, "type") and hasattr(msg, "content"):
-                            # LangChain message object
-                            role = (
-                                msg.type
-                                if msg.type in ["system", "user", "assistant"]
-                                else "user"
-                            )
-                            normalized.append(
-                                {"role": role, "content": msg.content}
-                            )
-                        else:
-                            # Fallback: convert to string
-                            normalized.append(
-                                {"role": "user", "content": str(msg)}
-                            )
-                    messages = normalized
-
-                payload = {
-                    "model": self.model,
-                    "messages": messages,
-                    "max_tokens": kwargs.get("max_tokens", 500),
-                    "temperature": kwargs.get("temperature", 0.7),
-                }
-
-                url = f"{self.base_url}/chat/completions"
-                headers = {
-                    "Authorization": f"Bearer {self.api_key}",
-                    "Content-Type": "application/json",
-                }
-
-                resp = requests.post(
-                    url, headers=headers, json=payload, timeout=30
-                )
-                resp.raise_for_status()
-                body = resp.json()
-
-                text = body["choices"][0]["message"]["content"]
-
-                # Return a simple namespace with content attribute
-                return SimpleNamespace(content=text)
-
-            async def agenerate(self, messages, **kwargs):
-                """Accept messages as list of dicts with role/content."""
-                # messages should be a list of dicts like
-                # [{"role":"system","content":"..."}]
-                if not isinstance(messages, list):
-                    # Fallback: wrap in a list
-                    messages = [{"role": "user", "content": str(messages)}]
-
-                payload = {
-                    "model": self.model,
-                    "messages": messages,
-                    "max_tokens": kwargs.get("max_tokens", 500),
-                    "temperature": kwargs.get("temperature", 0.7),
-                }
-
-                url = f"{self.base_url}/chat/completions"
-                headers = {
-                    "Authorization": f"Bearer {self.api_key}",
-                    "Content-Type": "application/json",
-                }
-
-                resp = requests.post(
-                    url, headers=headers, json=payload, timeout=30
-                )
-                resp.raise_for_status()
-                body = resp.json()
-
-                text = body["choices"][0]["message"]["content"]
-
-                # Return an object with `generations` like LangChain's agenerate
-                gen = SimpleNamespace(text=text)
-                return SimpleNamespace(generations=[[gen]])
-
-        api_key = os.environ.get("OPENAI_API_KEY")
-        if not api_key:
-            raise RuntimeError("OPENAI_API_KEY required for OpenAI adapter")
-
-        base_url = CONFIG.get("OPENAI_REVERSE_PROXY", "")
-        model_name = getattr(
-            llm, "model", os.environ.get("LLM_MODEL", "gpt-4o-mini")
-        )
-
-        return MinimalOpenAIAdapter(model_name, api_key, base_url)
-
+    # browser-use v0.9.7+ ChatOpenAI works directly
     return llm
 
 
@@ -681,7 +560,7 @@ async def create_browser_context_for_task(
 async def run_browser_task_async(
     task_id: str,
     instruction: Optional[str] = None,
-    llm: Optional[BaseLanguageModel] = None,
+    llm: Optional[Any] = None,
     config: Optional[Dict[str, Any]] = None,
     window_width: int = CONFIG["DEFAULT_WINDOW_WIDTH"],
     window_height: int = CONFIG["DEFAULT_WINDOW_HEIGHT"],
@@ -851,23 +730,21 @@ async def run_browser_task_async(
             else:
                 task_text = "Perform the requested browser task"
 
-        # If no LLM was provided, instantiate a default ChatOpenAI using
-        # environment variables so we can wrap it with our adapter.
+        # If no LLM was provided, instantiate browser-use's native ChatOpenAI
+        # which is specifically designed for browser automation
         if llm is None:
             try:
                 model_name = os.environ.get("LLM_MODEL", "gpt-4o-mini")
                 api_key = os.environ.get("OPENAI_API_KEY")
                 if api_key:
-                    # ChatOpenAI expects `model` and `openai_api_key` may not be
-                    # accepted in all langchain versions. Use modern `model=` and
-                    # rely on environment for API key when appropriate.
-                    llm = ChatOpenAI(model=model_name)
-                    os.environ["OPENAI_API_KEY"] = api_key
+                    llm = ChatOpenAI(model=model_name, api_key=api_key)
                 else:
+                    # Try without explicit api_key - will use OPENAI_API_KEY env var
                     llm = ChatOpenAI(model=model_name)
+                logger.info(f"Created browser-use ChatOpenAI with model={model_name}")
             except Exception as e:
                 logger.warning(
-                    "Failed to create default ChatOpenAI: %s", str(e)
+                    "Failed to create browser-use ChatOpenAI: %s", str(e)
                 )
 
         llm_for_agent = ensure_llm_adapter(llm)
@@ -899,7 +776,7 @@ async def run_browser_task_async(
 
         agent_result = await agent.run(max_steps=CONFIG["MAX_AGENT_STEPS"])
 
-        # Summarize results
+        # Summarize results - browser-use v0.9.7 returns AgentHistoryList
         final_result = "No final result available"
         is_successful = False
         has_errors = False
@@ -910,46 +787,78 @@ async def run_browser_task_async(
         steps_taken = 0
 
         if agent_result:
-            if hasattr(agent_result, "all_results"):
-                results = agent_result.all_results
-                if results:
-                    last_result = results[-1]
-                    if (
-                        hasattr(last_result, "extracted_content")
-                        and last_result.extracted_content
-                    ):
-                        final_result = str(last_result.extracted_content)
-
-                    is_successful = any(
-                        hasattr(r, "is_done") and r.is_done for r in results
-                    )
-
-                    errors = [
-                        str(r.error)
-                        for r in results
-                        if hasattr(r, "error") and r.error
-                    ]
-                    has_errors = len(errors) > 0
-
-                    extracted_content = [
-                        str(r.extracted_content)
-                        for r in results
-                        if hasattr(r, "extracted_content")
-                        and r.extracted_content
-                    ]
-
-                    steps_taken = len(results)
-
-            if hasattr(agent_result, "all_model_outputs"):
-                action_names = [
-                    (
-                        list(output.keys())[0]
-                        if isinstance(output, dict) and output
-                        else None
-                    )
-                    for output in agent_result.all_model_outputs
-                ]
-                action_names = [a for a in action_names if a]
+            # browser-use v0.9.7+ returns AgentHistoryList with direct attribute access
+            try:
+                # Get final_result - call the method to get actual value
+                if hasattr(agent_result, "final_result"):
+                    try:
+                        result_value = agent_result.final_result()
+                        if result_value:
+                            final_result = str(result_value)
+                    except Exception as e:
+                        logger.debug(f"Could not call final_result(): {e}")
+                
+                # Get is_successful - it's a property
+                if hasattr(agent_result, "is_successful"):
+                    try:
+                        is_successful = bool(agent_result.is_successful())
+                    except TypeError:
+                        # It's a property, not a method
+                        is_successful = bool(agent_result.is_successful)
+                
+                # Get has_errors - it's a property  
+                if hasattr(agent_result, "has_errors"):
+                    try:
+                        has_errors = bool(agent_result.has_errors())
+                    except TypeError:
+                        has_errors = bool(agent_result.has_errors)
+                
+                # Get errors list - filter out None values
+                if hasattr(agent_result, "errors"):
+                    errors_value = agent_result.errors
+                    if callable(errors_value):
+                        errors_value = errors_value()
+                    if errors_value:
+                        errors = [str(e) for e in errors_value if e is not None]
+                
+                # Get URLs
+                if hasattr(agent_result, "urls"):
+                    urls_value = agent_result.urls
+                    if callable(urls_value):
+                        urls_value = urls_value()
+                    if urls_value:
+                        urls_visited = [str(u) for u in urls_value]
+                
+                # Get action names
+                if hasattr(agent_result, "action_names"):
+                    actions_value = agent_result.action_names
+                    if callable(actions_value):
+                        actions_value = actions_value()
+                    if actions_value:
+                        action_names = [str(a) for a in actions_value]
+                
+                # Get extracted content
+                if hasattr(agent_result, "extracted_content"):
+                    content_value = agent_result.extracted_content
+                    if callable(content_value):
+                        content_value = content_value()
+                    if content_value:
+                        if isinstance(content_value, list):
+                            extracted_content = [str(c) for c in content_value]
+                        else:
+                            extracted_content = [str(content_value)]
+                
+                # Get number of steps
+                if hasattr(agent_result, "number_of_steps"):
+                    steps_value = agent_result.number_of_steps
+                    if callable(steps_value):
+                        steps_value = steps_value()
+                    if steps_value is not None:
+                        steps_taken = int(steps_value)
+                
+                logger.info(f"Task {task_id} result: success={is_successful}, steps={steps_taken}, has_result={bool(final_result != 'No final result available')}")
+            except Exception as e:
+                logger.error(f"Error extracting agent result for task {task_id}: {e}", exc_info=True)
 
         response_data = {
             "final_result": final_result,
@@ -1395,22 +1304,74 @@ def create_mcp_server(
                 state_response = (
                     await browser_session.get_browser_state_summary()
                 )
+                
+                # Serialize with depth limit and circular reference detection
+                import dataclasses
+                
+                def serialize_obj(obj, max_depth=10, current_depth=0, seen=None):
+                    """Recursively serialize with circular reference protection."""
+                    if seen is None:
+                        seen = set()
+                    
+                    # Check depth limit
+                    if current_depth > max_depth:
+                        return f"<max depth {max_depth} exceeded>"
+                    
+                    # Check for circular references
+                    obj_id = id(obj)
+                    if obj_id in seen:
+                        return "<circular reference>"
+                    
+                    # Add to seen set for non-primitives
+                    if not isinstance(obj, (str, int, float, bool, type(None))):
+                        seen = seen | {obj_id}  # Create new set to avoid mutation
+                    
+                    try:
+                        if dataclasses.is_dataclass(obj) and not isinstance(obj, type):
+                            # It's a dataclass instance
+                            result = {}
+                            for field in dataclasses.fields(obj):
+                                field_value = getattr(obj, field.name)
+                                result[field.name] = serialize_obj(field_value, max_depth, current_depth + 1, seen)
+                            return result
+                        elif hasattr(obj, "model_dump"):
+                            # Pydantic v2
+                            return serialize_obj(obj.model_dump(), max_depth, current_depth + 1, seen)
+                        elif hasattr(obj, "dict"):
+                            # Pydantic v1
+                            return serialize_obj(obj.dict(), max_depth, current_depth + 1, seen)
+                        elif isinstance(obj, dict):
+                            return {k: serialize_obj(v, max_depth, current_depth + 1, seen) for k, v in obj.items()}
+                        elif isinstance(obj, (list, tuple)):
+                            return [serialize_obj(item, max_depth, current_depth + 1, seen) for item in obj]
+                        else:
+                            return obj
+                    except Exception as e:
+                        logger.debug(f"Error serializing object: {e}")
+                        return f"<serialization error: {type(obj).__name__}>"
+                
+                # Serialize with limited depth for DOM state (can be huge)
+                state_response = serialize_obj(state_response, max_depth=5)
 
                 # Add screenshot if requested
                 if include_screenshot:
                     try:
                         page = browser_session.get_current_page()
                         screenshot_bytes = await page.screenshot()
+                        if not isinstance(state_response, dict):
+                            state_response = {}
                         state_response["screenshot"] = base64.b64encode(
                             screenshot_bytes
                         ).decode("utf-8")
                     except Exception as e:
+                        if not isinstance(state_response, dict):
+                            state_response = {}
                         state_response["screenshot_error"] = str(e)
 
                 return [
                     types.TextContent(
                         type="text",
-                        text=json.dumps(state_response, indent=2),
+                        text=json.dumps(state_response, indent=2, default=str),
                     )
                 ]
 
@@ -2416,10 +2377,11 @@ def main(
             "No Chrome path specified, letting Playwright use its default browser"
         )
 
-    # Initialize LLM and wrap with adapter for compatibility
+    # Initialize LLM using browser-use's native ChatOpenAI
     # Allow overriding the default model via environment variable `LLM_MODEL`.
     model_name = os.getenv("LLM_MODEL", "gpt-4o-mini")
-    llm_raw = ChatOpenAI(model=model_name, temperature=0.0)
+    api_key = os.getenv("OPENAI_API_KEY")
+    llm_raw = ChatOpenAI(model=model_name, temperature=0.0, api_key=api_key)
     llm = ensure_llm_adapter(llm_raw)
 
     # Create MCP server
