@@ -2454,6 +2454,51 @@ def main(
             }
         )
 
+    # Wrap the SSE post handler in a small ASGI adapter that converts
+    # anyio.ClosedResourceError into a benign HTTP 202 response. This
+    # prevents noisy tracebacks when a client posts a message after the
+    # corresponding SSE writer has been closed (race condition between
+    # disconnect and POST). The upstream `mcp` library raises
+    # anyio.ClosedResourceError when the writer is closed; ensure the
+    # server treats this as accepted rather than crashing the ASGI app.
+    try:
+        import anyio
+    except Exception:
+        anyio = None
+
+    async def _messages_asgi_app(scope, receive, send):
+        """ASGI adapter around `sse.handle_post_message`.
+
+        Args:
+            scope: ASGI scope
+            receive: ASGI receive callable
+            send: ASGI send callable
+        """
+        try:
+            await sse.handle_post_message(scope, receive, send)
+        except Exception as exc:  # pragma: no cover - defensive
+            # If anyio.ClosedResourceError, swallow and return 202 Accepted
+            # as the request is effectively delivered but the SSE consumer
+            # went away.
+            closed_error = False
+            if anyio is not None and isinstance(exc, anyio.ClosedResourceError):
+                closed_error = True
+
+            if closed_error:
+                try:
+                    from starlette.responses import PlainTextResponse
+
+                    resp = PlainTextResponse("Accepted", status_code=202)
+                    await resp(scope, receive, send)
+                    return
+                except Exception:
+                    # If even building the response failed, log and re-raise
+                    logger.debug("Failed to send 202 for ClosedResourceError", exc_info=True)
+                    raise
+
+            # For other exceptions, re-raise so Starlette/uvicorn can handle
+            raise
+
     starlette_app = Starlette(
         debug=True,
         routes=[
@@ -2461,7 +2506,7 @@ def main(
             Route("/sse", endpoint=handle_sse),
             Route("/", endpoint=_discovery_root),
             Route("/.well-known/mcp", endpoint=_discovery_root),
-            Mount("/messages/", app=sse.handle_post_message),
+            Mount("/messages/", app=_messages_asgi_app),
         ],
     )
 
