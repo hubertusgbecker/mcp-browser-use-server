@@ -84,7 +84,7 @@ async def run_task_test(session: mcp.ClientSession, tools: list) -> None:
     print(f"Calling task tool: {task_tool}")
     print(f"  URL: {url}")
     print(f"  Action: {action}")
-    
+
     # Call with correct parameters based on tool name
     if task_tool == "browser_use":
         resp = await session.call_tool(task_tool, {"url": url, "action": action})
@@ -195,7 +195,7 @@ async def run_session_test(session: mcp.ClientSession, tools: list) -> None:
         state_text = ""
         if state_resp and getattr(state_resp, "content", None):
             state_text = getattr(state_resp.content[0], "text", "") or ""
-        
+
         # Try to parse as JSON, if not just print raw
         state_data = safe_load_json(state_text)
         if state_data:

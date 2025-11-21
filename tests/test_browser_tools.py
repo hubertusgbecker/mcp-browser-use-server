@@ -430,23 +430,23 @@ class TestBrowserExtractContent:
         # Mock Agent and its result
         mock_agent_result = MagicMock()
         mock_agent_result.extracted_content = lambda: ["Test article about AI"]
-        
+
         with patch(
             "server.session.get_session",
             new_callable=AsyncMock,
             return_value=mock_session,
         ), patch("server.server.Agent") as mock_agent_class, \
            patch("server.server.ChatOpenAI") as mock_llm_class:
-            
+
             # Configure mock Agent
             mock_agent_instance = MagicMock()
             mock_agent_instance.run = AsyncMock(return_value=mock_agent_result)
             mock_agent_class.return_value = mock_agent_instance
-            
+
             # Configure mock ChatOpenAI
             mock_llm_instance = MagicMock()
             mock_llm_class.return_value = mock_llm_instance
-            
+
             result = await server.request_handlers[types.CallToolRequest](
                 types.CallToolRequest(
                     params=types.CallToolRequestParams(
@@ -460,7 +460,7 @@ class TestBrowserExtractContent:
             )
 
             response_data = json.loads(result.root.content[0].text)
-            
+
             # Check for success field and extracted_content
             assert "success" in response_data
             assert response_data["success"] is True
@@ -624,16 +624,16 @@ class TestTabsAPI:
 
         # Mock session with tabs - using objects with url and title attributes
         mock_session = MagicMock()
-        
+
         # Create mock tab objects
         mock_tab1 = MagicMock()
         mock_tab1.url = "https://example.com/1"
         mock_tab1.title = "Tab 1"
-        
+
         mock_tab2 = MagicMock()
         mock_tab2.url = "https://example.com/2"
         mock_tab2.title = "Tab 2"
-        
+
         mock_tabs = [mock_tab1, mock_tab2]
         mock_session.get_tabs = AsyncMock(return_value=mock_tabs)
 
@@ -654,7 +654,7 @@ class TestTabsAPI:
             response_data = json.loads(result.root.content[0].text)
             if "tabs" not in response_data:
                 pytest.fail("browser_list_tabs response missing 'tabs'")
-            
+
             tabs = response_data["tabs"]
             assert len(tabs) == 2
             assert tabs[0]["url"] == "https://example.com/1"
