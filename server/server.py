@@ -83,13 +83,10 @@ else:
 
 
 # LLM provider - use browser-use's native ChatOpenAI for v0.9.7+
-from types import SimpleNamespace
-
-from browser_use.llm import ChatOpenAI
-
 
 from typing import cast
 
+from browser_use.llm import ChatOpenAI
 from mcp.server import Server
 from mcp.server.sse import SseServerTransport
 from pythonjsonlogger import jsonlogger
@@ -797,7 +794,7 @@ async def run_browser_task_async(
                             final_result = str(result_value)
                     except Exception as e:
                         logger.debug(f"Could not call final_result(): {e}")
-                
+
                 # Get is_successful - it's a property
                 if hasattr(agent_result, "is_successful"):
                     try:
@@ -805,14 +802,14 @@ async def run_browser_task_async(
                     except TypeError:
                         # It's a property, not a method
                         is_successful = bool(agent_result.is_successful)
-                
-                # Get has_errors - it's a property  
+
+                # Get has_errors - it's a property
                 if hasattr(agent_result, "has_errors"):
                     try:
                         has_errors = bool(agent_result.has_errors())
                     except TypeError:
                         has_errors = bool(agent_result.has_errors)
-                
+
                 # Get errors list - filter out None values
                 if hasattr(agent_result, "errors"):
                     errors_value = agent_result.errors
@@ -820,7 +817,7 @@ async def run_browser_task_async(
                         errors_value = errors_value()
                     if errors_value:
                         errors = [str(e) for e in errors_value if e is not None]
-                
+
                 # Get URLs
                 if hasattr(agent_result, "urls"):
                     urls_value = agent_result.urls
@@ -828,7 +825,7 @@ async def run_browser_task_async(
                         urls_value = urls_value()
                     if urls_value:
                         urls_visited = [str(u) for u in urls_value]
-                
+
                 # Get action names
                 if hasattr(agent_result, "action_names"):
                     actions_value = agent_result.action_names
@@ -836,7 +833,7 @@ async def run_browser_task_async(
                         actions_value = actions_value()
                     if actions_value:
                         action_names = [str(a) for a in actions_value]
-                
+
                 # Get extracted content
                 if hasattr(agent_result, "extracted_content"):
                     content_value = agent_result.extracted_content
@@ -847,7 +844,7 @@ async def run_browser_task_async(
                             extracted_content = [str(c) for c in content_value]
                         else:
                             extracted_content = [str(content_value)]
-                
+
                 # Get number of steps
                 if hasattr(agent_result, "number_of_steps"):
                     steps_value = agent_result.number_of_steps
@@ -855,7 +852,7 @@ async def run_browser_task_async(
                         steps_value = steps_value()
                     if steps_value is not None:
                         steps_taken = int(steps_value)
-                
+
                 logger.info(f"Task {task_id} result: success={is_successful}, steps={steps_taken}, has_result={bool(final_result != 'No final result available')}")
             except Exception as e:
                 logger.error(f"Error extracting agent result for task {task_id}: {e}", exc_info=True)
@@ -996,7 +993,7 @@ def create_mcp_server(
         window_width = CONFIG.get("DEFAULT_WINDOW_WIDTH", 1280)
         window_height = CONFIG.get("DEFAULT_WINDOW_HEIGHT", 1100)
         locale = CONFIG.get("DEFAULT_LOCALE", "en-US")
-        
+
         # Handle browser_use tool
         if name == "browser_use":
             # Check required arguments
@@ -1310,28 +1307,28 @@ def create_mcp_server(
                 state_response = (
                     await browser_session.get_browser_state_summary()
                 )
-                
+
                 # Serialize with depth limit and circular reference detection
                 import dataclasses
-                
+
                 def serialize_obj(obj, max_depth=10, current_depth=0, seen=None):
                     """Recursively serialize with circular reference protection."""
                     if seen is None:
                         seen = set()
-                    
+
                     # Check depth limit
                     if current_depth > max_depth:
                         return f"<max depth {max_depth} exceeded>"
-                    
+
                     # Check for circular references
                     obj_id = id(obj)
                     if obj_id in seen:
                         return "<circular reference>"
-                    
+
                     # Add to seen set for non-primitives
                     if not isinstance(obj, (str, int, float, bool, type(None))):
                         seen = seen | {obj_id}  # Create new set to avoid mutation
-                    
+
                     try:
                         if dataclasses.is_dataclass(obj) and not isinstance(obj, type):
                             # It's a dataclass instance
@@ -1355,7 +1352,7 @@ def create_mcp_server(
                     except Exception as e:
                         logger.debug(f"Error serializing object: {e}")
                         return f"<serialization error: {type(obj).__name__}>"
-                
+
                 # Serialize with limited depth for DOM state (can be huge)
                 state_response = serialize_obj(state_response, max_depth=5)
 
@@ -1593,9 +1590,9 @@ def create_mcp_server(
 
             # Extract content using Agent with the existing session's browser
             try:
-                # Get current page state as text
-                current_state_text = await browser_session.get_state_as_text()
-                
+                # Optionally retrieve current page state (not required here)
+                await browser_session.get_state_as_text()
+
                 # Create LLM instance for extraction
                 model_name = os.environ.get("LLM_MODEL", "gpt-4o-mini")
                 api_key = os.environ.get("OPENAI_API_KEY")
@@ -1603,17 +1600,17 @@ def create_mcp_server(
                     extraction_llm = ChatOpenAI(model=model_name, api_key=api_key)
                 else:
                     extraction_llm = ChatOpenAI(model=model_name)
-                
+
                 # Create an extraction agent task
                 agent = Agent(
                     task=f"Extract the following from the current page: {instruction}",
                     llm=extraction_llm,
                     browser=browser_session
                 )
-                
+
                 # Run agent to extract content
                 agent_result = await agent.run()
-                
+
                 # Extract the actual result text
                 extracted_text = ""
                 if agent_result is None:
@@ -1623,7 +1620,7 @@ def create_mcp_server(
                     if callable(agent_result.extracted_content):
                         try:
                             extracted_text = str(agent_result.extracted_content())
-                        except:
+                        except Exception:
                             extracted_text = str(agent_result)
                     else:
                         extracted_text = str(agent_result.extracted_content)
@@ -1631,7 +1628,7 @@ def create_mcp_server(
                     if callable(agent_result.final_result):
                         try:
                             extracted_text = str(agent_result.final_result())
-                        except:
+                        except Exception:
                             extracted_text = str(agent_result)
                     else:
                         extracted_text = str(agent_result.final_result)
@@ -1644,14 +1641,14 @@ def create_mcp_server(
                         # Try to serialize the dict
                         try:
                             extracted_text = json.dumps(agent_result)
-                        except:
+                        except Exception:
                             extracted_text = str(agent_result)
                 elif isinstance(agent_result, str):
                     extracted_text = agent_result
                 else:
                     # Last resort - stringify
                     extracted_text = str(agent_result)
-                
+
                 return [
                     types.TextContent(
                         type="text",
@@ -1708,7 +1705,7 @@ def create_mcp_server(
                             "title": getattr(tab, 'title', 'N/A') if hasattr(tab, 'title') else 'N/A'
                         }
                         tabs_list.append(tab_info)
-                
+
                 return [
                     types.TextContent(
                         type="text",
@@ -1759,8 +1756,13 @@ def create_mcp_server(
                     type="text",
                     text=json.dumps(
                         {
-                            "error": "Tab switching is not directly supported. Use browser_navigate to navigate to a different URL or create multiple sessions.",
+                            "error": (
+                                "Tab switching is not directly supported. "
+                                "Use browser_navigate to navigate to a different URL "
+                                "or create multiple sessions."
+                            ),
                             "session_id": session_id,
+                            "requested_tab_index": tab_index,
                         },
                         indent=2,
                     ),
@@ -1798,8 +1800,12 @@ def create_mcp_server(
                     type="text",
                     text=json.dumps(
                         {
-                            "error": "Closing specific tabs by index is not supported. Use browser_close_session to close the entire session.",
+                            "error": (
+                                "Closing specific tabs by index is not supported. "
+                                "Use browser_close_session to close the entire session."
+                            ),
                             "session_id": session_id,
+                            "requested_tab_index": tab_index,
                         },
                         indent=2,
                     ),
