@@ -11,7 +11,7 @@ services:
       # SSE server port (bound to localhost)
       - "127.0.0.1:${HOST_PORT:-8081}:8081"
       # VNC port for browser visualization (host:container)
-      - "127.0.0.1:${VNC_HOST_PORT:-5902}:5900"
+      - "127.0.0.1:${VNC_HOST_PORT:-5900}:5900"
     env_file:
       - ./.env
     environment:

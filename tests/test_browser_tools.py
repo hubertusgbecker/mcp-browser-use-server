@@ -416,27 +416,37 @@ class TestBrowserExtractContent:
 
     @pytest.mark.asyncio
     async def test_browser_extract_content(self, mock_llm, cleanup_tasks):
-        """Test browser_extract_content extracts content using LLM."""
+        """Test browser_extract_content extracts content using Agent."""
         import json
         from unittest.mock import AsyncMock, MagicMock, patch
 
         server = create_mcp_server(llm=mock_llm)
         from mcp import types
 
-        # Mock session and extraction
+        # Mock session
         mock_session = MagicMock()
-        mock_session.extract_content = AsyncMock(
-            return_value={
-                "extracted_data": "Test article about AI",
-                "metadata": {"title": "AI Article"},
-            }
-        )
+        mock_session.get_state_as_text = AsyncMock(return_value="<html>Test page</html>")
 
+        # Mock Agent and its result
+        mock_agent_result = MagicMock()
+        mock_agent_result.extracted_content = lambda: ["Test article about AI"]
+        
         with patch(
             "server.session.get_session",
             new_callable=AsyncMock,
             return_value=mock_session,
-        ):
+        ), patch("server.server.Agent") as mock_agent_class, \
+           patch("server.server.ChatOpenAI") as mock_llm_class:
+            
+            # Configure mock Agent
+            mock_agent_instance = MagicMock()
+            mock_agent_instance.run = AsyncMock(return_value=mock_agent_result)
+            mock_agent_class.return_value = mock_agent_instance
+            
+            # Configure mock ChatOpenAI
+            mock_llm_instance = MagicMock()
+            mock_llm_class.return_value = mock_llm_instance
+            
             result = await server.request_handlers[types.CallToolRequest](
                 types.CallToolRequest(
                     params=types.CallToolRequestParams(
@@ -450,13 +460,12 @@ class TestBrowserExtractContent:
             )
 
             response_data = json.loads(result.root.content[0].text)
-            if "extracted_data" not in response_data:
-                pytest.fail("browser_extract_content missing 'extracted_data'")
-            if response_data["extracted_data"] != "Test article about AI":
-                pytest.fail("browser_extract_content returned unexpected data")
-            mock_session.extract_content.assert_called_once_with(
-                "Extract the main article text"
-            )
+            
+            # Check for success field and extracted_content
+            assert "success" in response_data
+            assert response_data["success"] is True
+            assert "extracted_content" in response_data
+            assert "Test article about AI" in response_data["extracted_content"]
 
     @pytest.mark.asyncio
     async def test_browser_extract_content_session_not_found(
@@ -613,23 +622,20 @@ class TestTabsAPI:
         server = create_mcp_server(llm=mock_llm)
         from mcp import types
 
-        # Mock session with tabs
+        # Mock session with tabs - using objects with url and title attributes
         mock_session = MagicMock()
-        mock_tabs = [
-            {
-                "index": 0,
-                "title": "Tab 1",
-                "url": "https://example.com/1",
-                "active": True,
-            },
-            {
-                "index": 1,
-                "title": "Tab 2",
-                "url": "https://example.com/2",
-                "active": False,
-            },
-        ]
-        mock_session.list_tabs = AsyncMock(return_value=mock_tabs)
+        
+        # Create mock tab objects
+        mock_tab1 = MagicMock()
+        mock_tab1.url = "https://example.com/1"
+        mock_tab1.title = "Tab 1"
+        
+        mock_tab2 = MagicMock()
+        mock_tab2.url = "https://example.com/2"
+        mock_tab2.title = "Tab 2"
+        
+        mock_tabs = [mock_tab1, mock_tab2]
+        mock_session.get_tabs = AsyncMock(return_value=mock_tabs)
 
         with patch(
             "server.session.get_session",
@@ -648,6 +654,13 @@ class TestTabsAPI:
             response_data = json.loads(result.root.content[0].text)
             if "tabs" not in response_data:
                 pytest.fail("browser_list_tabs response missing 'tabs'")
+            
+            tabs = response_data["tabs"]
+            assert len(tabs) == 2
+            assert tabs[0]["url"] == "https://example.com/1"
+            assert tabs[0]["title"] == "Tab 1"
+            assert tabs[1]["url"] == "https://example.com/2"
+            assert tabs[1]["title"] == "Tab 2"
             if len(response_data["tabs"]) != 2:
                 pytest.fail(
                     "browser_list_tabs returned unexpected number of tabs"
@@ -657,7 +670,7 @@ class TestTabsAPI:
 
     @pytest.mark.asyncio
     async def test_browser_switch_tab(self, mock_llm, cleanup_tasks):
-        """Test browser_switch_tab switches to specified tab."""
+        """Test browser_switch_tab returns error message (not supported)."""
         import json
         from unittest.mock import AsyncMock, MagicMock, patch
 
@@ -665,7 +678,6 @@ class TestTabsAPI:
         from mcp import types
 
         mock_session = MagicMock()
-        mock_session.switch_tab = AsyncMock()
 
         with patch(
             "server.session.get_session",
@@ -681,14 +693,14 @@ class TestTabsAPI:
                 )
             )
 
-            mock_session.switch_tab.assert_called_once_with(1)
+            # Verify that error message is returned
             response_data = json.loads(result.root.content[0].text)
-            if "message" not in response_data:
-                pytest.fail("browser_switch_tab did not return a message")
+            assert "error" in response_data
+            assert "not directly supported" in response_data["error"].lower()
 
     @pytest.mark.asyncio
     async def test_browser_close_tab(self, mock_llm, cleanup_tasks):
-        """Test browser_close_tab closes specified tab."""
+        """Test browser_close_tab returns error message (not supported)."""
         import json
         from unittest.mock import AsyncMock, MagicMock, patch
 
@@ -696,7 +708,6 @@ class TestTabsAPI:
         from mcp import types
 
         mock_session = MagicMock()
-        mock_session.close_tab = AsyncMock()
 
         with patch(
             "server.session.get_session",
@@ -712,10 +723,10 @@ class TestTabsAPI:
                 )
             )
 
-            mock_session.close_tab.assert_called_once_with(1)
+            # Verify that error message is returned
             response_data = json.loads(result.root.content[0].text)
-            if "message" not in response_data:
-                pytest.fail("browser_close_tab did not return a message")
+            assert "error" in response_data
+            assert "not supported" in response_data["error"].lower()
 
     @pytest.mark.asyncio
     async def test_browser_list_tabs_in_list_tools(self, mock_llm):

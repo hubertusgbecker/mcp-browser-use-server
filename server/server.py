@@ -991,6 +991,12 @@ def create_mcp_server(
         Raises:
             ValueError: If required arguments are missing
         """
+        # Initialize common variables used by multiple tools
+        llm = None  # Will be created in run_browser_task_async if needed
+        window_width = CONFIG.get("DEFAULT_WINDOW_WIDTH", 1280)
+        window_height = CONFIG.get("DEFAULT_WINDOW_HEIGHT", 1100)
+        locale = CONFIG.get("DEFAULT_LOCALE", "en-US")
+        
         # Handle browser_use tool
         if name == "browser_use":
             # Check required arguments
@@ -1585,16 +1591,79 @@ def create_mcp_server(
                     )
                 ]
 
-            # Extract content using session's extract_content method
+            # Extract content using Agent with the existing session's browser
             try:
-                extracted = await browser_session.extract_content(instruction)
+                # Get current page state as text
+                current_state_text = await browser_session.get_state_as_text()
+                
+                # Create LLM instance for extraction
+                model_name = os.environ.get("LLM_MODEL", "gpt-4o-mini")
+                api_key = os.environ.get("OPENAI_API_KEY")
+                if api_key:
+                    extraction_llm = ChatOpenAI(model=model_name, api_key=api_key)
+                else:
+                    extraction_llm = ChatOpenAI(model=model_name)
+                
+                # Create an extraction agent task
+                agent = Agent(
+                    task=f"Extract the following from the current page: {instruction}",
+                    llm=extraction_llm,
+                    browser=browser_session
+                )
+                
+                # Run agent to extract content
+                agent_result = await agent.run()
+                
+                # Extract the actual result text
+                extracted_text = ""
+                if agent_result is None:
+                    extracted_text = "No content extracted"
+                elif hasattr(agent_result, 'extracted_content'):
+                    # Check if it's a method or property
+                    if callable(agent_result.extracted_content):
+                        try:
+                            extracted_text = str(agent_result.extracted_content())
+                        except:
+                            extracted_text = str(agent_result)
+                    else:
+                        extracted_text = str(agent_result.extracted_content)
+                elif hasattr(agent_result, 'final_result'):
+                    if callable(agent_result.final_result):
+                        try:
+                            extracted_text = str(agent_result.final_result())
+                        except:
+                            extracted_text = str(agent_result)
+                    else:
+                        extracted_text = str(agent_result.final_result)
+                elif isinstance(agent_result, dict):
+                    if 'final_result' in agent_result:
+                        extracted_text = str(agent_result['final_result'])
+                    elif 'extracted_content' in agent_result:
+                        extracted_text = str(agent_result['extracted_content'])
+                    else:
+                        # Try to serialize the dict
+                        try:
+                            extracted_text = json.dumps(agent_result)
+                        except:
+                            extracted_text = str(agent_result)
+                elif isinstance(agent_result, str):
+                    extracted_text = agent_result
+                else:
+                    # Last resort - stringify
+                    extracted_text = str(agent_result)
+                
                 return [
                     types.TextContent(
                         type="text",
-                        text=json.dumps(extracted, indent=2),
+                        text=json.dumps({
+                            "extracted_content": extracted_text,
+                            "instruction": instruction,
+                            "success": True
+                        }, indent=2),
                     )
                 ]
             except Exception as e:
+                logger.error(f"Extraction failed: {e}", exc_info=True)
                 return [
                     types.TextContent(
                         type="text",
@@ -1626,14 +1695,37 @@ def create_mcp_server(
                     )
                 ]
 
-            # List tabs
-            tabs = await browser_session.list_tabs()
-            return [
-                types.TextContent(
-                    type="text",
-                    text=json.dumps({"tabs": tabs}, indent=2),
-                )
-            ]
+            # List tabs using get_tabs()
+            try:
+                tabs = await browser_session.get_tabs()
+                # Convert tabs to serializable format
+                tabs_list = []
+                if tabs:
+                    for i, tab in enumerate(tabs):
+                        tab_info = {
+                            "index": i,
+                            "url": getattr(tab, 'url', 'N/A') if hasattr(tab, 'url') else str(tab),
+                            "title": getattr(tab, 'title', 'N/A') if hasattr(tab, 'title') else 'N/A'
+                        }
+                        tabs_list.append(tab_info)
+                
+                return [
+                    types.TextContent(
+                        type="text",
+                        text=json.dumps({"tabs": tabs_list, "count": len(tabs_list)}, indent=2),
+                    )
+                ]
+            except Exception as e:
+                logger.error(f"Error listing tabs: {e}", exc_info=True)
+                return [
+                    types.TextContent(
+                        type="text",
+                        text=json.dumps(
+                            {"error": f"Failed to list tabs: {str(e)}"},
+                            indent=2,
+                        ),
+                    )
+                ]
 
         elif name == "browser_switch_tab":
             from server import session as session_manager
@@ -1659,14 +1751,15 @@ def create_mcp_server(
                     )
                 ]
 
-            # Switch tab
-            await browser_session.switch_tab(tab_index)
+            # Switch tab/page - browser-use doesn't have a direct switch method
+            # Instead, we return a message that tab switching is not directly supported
+            # Users should use browser_navigate or create multiple sessions
             return [
                 types.TextContent(
                     type="text",
                     text=json.dumps(
                         {
-                            "message": f"Switched to tab {tab_index}",
+                            "error": "Tab switching is not directly supported. Use browser_navigate to navigate to a different URL or create multiple sessions.",
                             "session_id": session_id,
                         },
                         indent=2,
@@ -1698,14 +1791,14 @@ def create_mcp_server(
                     )
                 ]
 
-            # Close tab
-            await browser_session.close_tab(tab_index)
+            # Close tab/page - browser-use doesn't support closing specific tabs by index
+            # Return error message explaining limitation
             return [
                 types.TextContent(
                     type="text",
                     text=json.dumps(
                         {
-                            "message": f"Closed tab {tab_index}",
+                            "error": "Closing specific tabs by index is not supported. Use browser_close_session to close the entire session.",
                             "session_id": session_id,
                         },
                         indent=2,
