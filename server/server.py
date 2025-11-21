@@ -2432,11 +2432,35 @@ def main(
         """Simple health endpoint for Docker and load balancers."""
         return PlainTextResponse("ok")
 
+    async def _discovery_root(request):
+        """Discovery endpoint to help clients (like DiskStation) detect MCP SSE server.
+
+        Returns a small JSON object pointing to the SSE endpoint and the messages
+        POST template. This endpoint is intentionally simple and safe for
+        automated probes.
+        """
+        from starlette.responses import JSONResponse
+
+        root_path = request.scope.get("root_path", "")
+        sse_path = root_path.rstrip("/") + "/sse"
+        messages_path = root_path.rstrip("/") + "/messages/?session_id={session_id}"
+
+        return JSONResponse(
+            {
+                "service": "mcp-browser-use-server",
+                "protocol": "mcp-sse",
+                "sse_endpoint": sse_path,
+                "messages_post_template": messages_path,
+            }
+        )
+
     starlette_app = Starlette(
         debug=True,
         routes=[
             Route("/health", endpoint=_health),
             Route("/sse", endpoint=handle_sse),
+            Route("/", endpoint=_discovery_root),
+            Route("/.well-known/mcp", endpoint=_discovery_root),
             Mount("/messages/", app=sse.handle_post_message),
         ],
     )
