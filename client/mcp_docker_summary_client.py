@@ -74,12 +74,16 @@ async def run_task_test(session: mcp.ClientSession, tools: list) -> None:
             break
 
     if not task_tool:
-        print("No task tool found (run_browser_task/browser_use). Skipping task test.")
+        print(
+            "No task tool found (run_browser_task/browser_use). Skipping task test."
+        )
         return
 
     # browser_use requires url and action parameters
     url = "https://quotes.toscrape.com/"
-    action = "Extract the first 3 quotes with their authors and return as JSON array"
+    action = (
+        "Extract the first 3 quotes with their authors and return as JSON array"
+    )
 
     print(f"Calling task tool: {task_tool}")
     print(f"  URL: {url}")
@@ -87,10 +91,14 @@ async def run_task_test(session: mcp.ClientSession, tools: list) -> None:
 
     # Call with correct parameters based on tool name
     if task_tool == "browser_use":
-        resp = await session.call_tool(task_tool, {"url": url, "action": action})
+        resp = await session.call_tool(
+            task_tool, {"url": url, "action": action}
+        )
     else:
         # Fallback for other tool names
-        resp = await session.call_tool(task_tool, {"instruction": f"Go to {url} and {action}"})
+        resp = await session.call_tool(
+            task_tool, {"instruction": f"Go to {url} and {action}"}
+        )
 
     text = ""
     if resp and getattr(resp, "content", None):
@@ -119,7 +127,9 @@ async def run_task_test(session: mcp.ClientSession, tools: list) -> None:
             task_id = m.group(1)
 
     if not task_id:
-        print("Could not determine task_id from call_tool response; raw response:")
+        print(
+            "Could not determine task_id from call_tool response; raw response:"
+        )
         print(text)
         return
 
@@ -139,7 +149,9 @@ async def run_task_test(session: mcp.ClientSession, tools: list) -> None:
     for i in range(60):
         await asyncio.sleep(2 if i < 10 else 5)
         try:
-            result_resp = await session.call_tool(poll_tool, {"task_id": task_id})
+            result_resp = await session.call_tool(
+                poll_tool, {"task_id": task_id}
+            )
         except Exception as e:
             print(f"Poll call failed: {e}")
             continue
@@ -174,7 +186,9 @@ async def run_session_test(session: mcp.ClientSession, tools: list) -> None:
         return
 
     print("Creating short session via browser_navigate")
-    nav_resp = await session.call_tool("browser_navigate", {"url": "https://example.com"})
+    nav_resp = await session.call_tool(
+        "browser_navigate", {"url": "https://example.com"}
+    )
     nav_text = ""
     if nav_resp and getattr(nav_resp, "content", None):
         nav_text = getattr(nav_resp.content[0], "text", "") or ""
@@ -191,7 +205,9 @@ async def run_session_test(session: mcp.ClientSession, tools: list) -> None:
     print(f"Created session: {session_id}")
 
     if any(t.name == "browser_get_state" for t in tools):
-        state_resp = await session.call_tool("browser_get_state", {"session_id": session_id, "screenshot": False})
+        state_resp = await session.call_tool(
+            "browser_get_state", {"session_id": session_id, "screenshot": False}
+        )
         state_text = ""
         if state_resp and getattr(state_resp, "content", None):
             state_text = getattr(state_resp.content[0], "text", "") or ""
@@ -206,7 +222,9 @@ async def run_session_test(session: mcp.ClientSession, tools: list) -> None:
             print(state_text[:500] if len(state_text) > 500 else state_text)
 
     if any(t.name == "browser_close_session" for t in tools):
-        close_resp = await session.call_tool("browser_close_session", {"session_id": session_id})
+        close_resp = await session.call_tool(
+            "browser_close_session", {"session_id": session_id}
+        )
         print("Closed session response:")
         if close_resp and getattr(close_resp, "content", None):
             print(getattr(close_resp.content[0], "text", ""))
@@ -218,7 +236,9 @@ async def main() -> int:
 
     print(f"Checking TCP port {host}:{port}...")
     if not await tcp_port_open(host, port):
-        print(f"Unable to reach {host}:{port}. Is the Docker container running and exposing the port?")
+        print(
+            f"Unable to reach {host}:{port}. Is the Docker container running and exposing the port?"
+        )
         return 2
 
     print("Connecting to MCP server over SSE...")

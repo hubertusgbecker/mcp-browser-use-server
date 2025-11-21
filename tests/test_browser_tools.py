@@ -425,19 +425,23 @@ class TestBrowserExtractContent:
 
         # Mock session
         mock_session = MagicMock()
-        mock_session.get_state_as_text = AsyncMock(return_value="<html>Test page</html>")
+        mock_session.get_state_as_text = AsyncMock(
+            return_value="<html>Test page</html>"
+        )
 
         # Mock Agent and its result
         mock_agent_result = MagicMock()
         mock_agent_result.extracted_content = lambda: ["Test article about AI"]
 
-        with patch(
-            "server.session.get_session",
-            new_callable=AsyncMock,
-            return_value=mock_session,
-        ), patch("server.server.Agent") as mock_agent_class, \
-           patch("server.server.ChatOpenAI") as mock_llm_class:
-
+        with (
+            patch(
+                "server.session.get_session",
+                new_callable=AsyncMock,
+                return_value=mock_session,
+            ),
+            patch("server.server.Agent") as mock_agent_class,
+            patch("server.server.ChatOpenAI") as mock_llm_class,
+        ):
             # Configure mock Agent
             mock_agent_instance = MagicMock()
             mock_agent_instance.run = AsyncMock(return_value=mock_agent_result)

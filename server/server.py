@@ -738,7 +738,9 @@ async def run_browser_task_async(
                 else:
                     # Try without explicit api_key - will use OPENAI_API_KEY env var
                     llm = ChatOpenAI(model=model_name)
-                logger.info(f"Created browser-use ChatOpenAI with model={model_name}")
+                logger.info(
+                    f"Created browser-use ChatOpenAI with model={model_name}"
+                )
             except Exception as e:
                 logger.warning(
                     "Failed to create browser-use ChatOpenAI: %s", str(e)
@@ -853,9 +855,14 @@ async def run_browser_task_async(
                     if steps_value is not None:
                         steps_taken = int(steps_value)
 
-                logger.info(f"Task {task_id} result: success={is_successful}, steps={steps_taken}, has_result={bool(final_result != 'No final result available')}")
+                logger.info(
+                    f"Task {task_id} result: success={is_successful}, steps={steps_taken}, has_result={bool(final_result != 'No final result available')}"
+                )
             except Exception as e:
-                logger.error(f"Error extracting agent result for task {task_id}: {e}", exc_info=True)
+                logger.error(
+                    f"Error extracting agent result for task {task_id}: {e}",
+                    exc_info=True,
+                )
 
         response_data = {
             "final_result": final_result,
@@ -1311,7 +1318,9 @@ def create_mcp_server(
                 # Serialize with depth limit and circular reference detection
                 import dataclasses
 
-                def serialize_obj(obj, max_depth=10, current_depth=0, seen=None):
+                def serialize_obj(
+                    obj, max_depth=10, current_depth=0, seen=None
+                ):
                     """Recursively serialize with circular reference protection."""
                     if seen is None:
                         seen = set()
@@ -1327,26 +1336,52 @@ def create_mcp_server(
 
                     # Add to seen set for non-primitives
                     if not isinstance(obj, (str, int, float, bool, type(None))):
-                        seen = seen | {obj_id}  # Create new set to avoid mutation
+                        seen = seen | {
+                            obj_id
+                        }  # Create new set to avoid mutation
 
                     try:
-                        if dataclasses.is_dataclass(obj) and not isinstance(obj, type):
+                        if dataclasses.is_dataclass(obj) and not isinstance(
+                            obj, type
+                        ):
                             # It's a dataclass instance
                             result = {}
                             for field in dataclasses.fields(obj):
                                 field_value = getattr(obj, field.name)
-                                result[field.name] = serialize_obj(field_value, max_depth, current_depth + 1, seen)
+                                result[field.name] = serialize_obj(
+                                    field_value,
+                                    max_depth,
+                                    current_depth + 1,
+                                    seen,
+                                )
                             return result
                         elif hasattr(obj, "model_dump"):
                             # Pydantic v2
-                            return serialize_obj(obj.model_dump(), max_depth, current_depth + 1, seen)
+                            return serialize_obj(
+                                obj.model_dump(),
+                                max_depth,
+                                current_depth + 1,
+                                seen,
+                            )
                         elif hasattr(obj, "dict"):
                             # Pydantic v1
-                            return serialize_obj(obj.dict(), max_depth, current_depth + 1, seen)
+                            return serialize_obj(
+                                obj.dict(), max_depth, current_depth + 1, seen
+                            )
                         elif isinstance(obj, dict):
-                            return {k: serialize_obj(v, max_depth, current_depth + 1, seen) for k, v in obj.items()}
+                            return {
+                                k: serialize_obj(
+                                    v, max_depth, current_depth + 1, seen
+                                )
+                                for k, v in obj.items()
+                            }
                         elif isinstance(obj, (list, tuple)):
-                            return [serialize_obj(item, max_depth, current_depth + 1, seen) for item in obj]
+                            return [
+                                serialize_obj(
+                                    item, max_depth, current_depth + 1, seen
+                                )
+                                for item in obj
+                            ]
                         else:
                             return obj
                     except Exception as e:
@@ -1597,15 +1632,17 @@ def create_mcp_server(
                 model_name = os.environ.get("LLM_MODEL", "gpt-4o-mini")
                 api_key = os.environ.get("OPENAI_API_KEY")
                 if api_key:
-                    extraction_llm = ChatOpenAI(model=model_name, api_key=api_key)
+                    extraction_llm = ChatOpenAI(
+                        model=model_name, api_key=api_key
+                    )
                 else:
                     extraction_llm = ChatOpenAI(model=model_name)
 
                 # Create an extraction agent task
-                agent = Agent(
+                agent: Agent = Agent(
                     task=f"Extract the following from the current page: {instruction}",
                     llm=extraction_llm,
-                    browser=browser_session
+                    browser=browser_session,
                 )
 
                 # Run agent to extract content
@@ -1615,16 +1652,18 @@ def create_mcp_server(
                 extracted_text = ""
                 if agent_result is None:
                     extracted_text = "No content extracted"
-                elif hasattr(agent_result, 'extracted_content'):
+                elif hasattr(agent_result, "extracted_content"):
                     # Check if it's a method or property
                     if callable(agent_result.extracted_content):
                         try:
-                            extracted_text = str(agent_result.extracted_content())
+                            extracted_text = str(
+                                agent_result.extracted_content()
+                            )
                         except Exception:
                             extracted_text = str(agent_result)
                     else:
                         extracted_text = str(agent_result.extracted_content)
-                elif hasattr(agent_result, 'final_result'):
+                elif hasattr(agent_result, "final_result"):
                     if callable(agent_result.final_result):
                         try:
                             extracted_text = str(agent_result.final_result())
@@ -1633,10 +1672,10 @@ def create_mcp_server(
                     else:
                         extracted_text = str(agent_result.final_result)
                 elif isinstance(agent_result, dict):
-                    if 'final_result' in agent_result:
-                        extracted_text = str(agent_result['final_result'])
-                    elif 'extracted_content' in agent_result:
-                        extracted_text = str(agent_result['extracted_content'])
+                    if "final_result" in agent_result:
+                        extracted_text = str(agent_result["final_result"])
+                    elif "extracted_content" in agent_result:
+                        extracted_text = str(agent_result["extracted_content"])
                     else:
                         # Try to serialize the dict
                         try:
@@ -1652,11 +1691,14 @@ def create_mcp_server(
                 return [
                     types.TextContent(
                         type="text",
-                        text=json.dumps({
-                            "extracted_content": extracted_text,
-                            "instruction": instruction,
-                            "success": True
-                        }, indent=2),
+                        text=json.dumps(
+                            {
+                                "extracted_content": extracted_text,
+                                "instruction": instruction,
+                                "success": True,
+                            },
+                            indent=2,
+                        ),
                     )
                 ]
             except Exception as e:
@@ -1701,15 +1743,22 @@ def create_mcp_server(
                     for i, tab in enumerate(tabs):
                         tab_info = {
                             "index": i,
-                            "url": getattr(tab, 'url', 'N/A') if hasattr(tab, 'url') else str(tab),
-                            "title": getattr(tab, 'title', 'N/A') if hasattr(tab, 'title') else 'N/A'
+                            "url": getattr(tab, "url", "N/A")
+                            if hasattr(tab, "url")
+                            else str(tab),
+                            "title": getattr(tab, "title", "N/A")
+                            if hasattr(tab, "title")
+                            else "N/A",
                         }
                         tabs_list.append(tab_info)
 
                 return [
                     types.TextContent(
                         type="text",
-                        text=json.dumps({"tabs": tabs_list, "count": len(tabs_list)}, indent=2),
+                        text=json.dumps(
+                            {"tabs": tabs_list, "count": len(tabs_list)},
+                            indent=2,
+                        ),
                     )
                 ]
             except Exception as e:
@@ -2542,7 +2591,9 @@ def main(
 
         root_path = request.scope.get("root_path", "")
         sse_path = root_path.rstrip("/") + "/sse"
-        messages_path = root_path.rstrip("/") + "/messages/?session_id={session_id}"
+        messages_path = (
+            root_path.rstrip("/") + "/messages/?session_id={session_id}"
+        )
 
         return JSONResponse(
             {
@@ -2560,10 +2611,13 @@ def main(
     # disconnect and POST). The upstream `mcp` library raises
     # anyio.ClosedResourceError when the writer is closed; ensure the
     # server treats this as accepted rather than crashing the ASGI app.
+    # Optional import of anyio for ClosedResourceError detection.
+    # Assign once to avoid redefinition issues with type checkers.
+    _anyio = None
     try:
-        import anyio
+        import anyio as _anyio  # type: ignore
     except Exception:
-        anyio = None
+        _anyio = None
 
     async def _messages_asgi_app(scope, receive, send):
         """ASGI adapter around `sse.handle_post_message`.
@@ -2580,7 +2634,7 @@ def main(
             # as the request is effectively delivered but the SSE consumer
             # went away.
             closed_error = False
-            if anyio is not None and isinstance(exc, anyio.ClosedResourceError):
+            if _anyio is not None and isinstance(exc, _anyio.ClosedResourceError):
                 closed_error = True
 
             if closed_error:
@@ -2592,7 +2646,10 @@ def main(
                     return
                 except Exception:
                     # If even building the response failed, log and re-raise
-                    logger.debug("Failed to send 202 for ClosedResourceError", exc_info=True)
+                    logger.debug(
+                        "Failed to send 202 for ClosedResourceError",
+                        exc_info=True,
+                    )
                     raise
 
             # For other exceptions, re-raise so Starlette/uvicorn can handle
