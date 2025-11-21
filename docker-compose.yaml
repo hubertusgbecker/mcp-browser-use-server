@@ -8,8 +8,8 @@ services:
     container_name: ${CONTAINER_NAME:-mcp-browser-use-server}
     # Service ports
     ports:
-      # SSE server port (bound to localhost)
-      - "127.0.0.1:${HOST_PORT:-8081}:8081"
+      # SSE server port (bound to all interfaces so external clients can reach it)
+      - "${HOST_PORT:-8081}:8081"
       # VNC port for browser visualization (host:container)
       - "127.0.0.1:${VNC_HOST_PORT:-5900}:5900"
     env_file:
@@ -55,7 +55,7 @@ services:
     env_file:
       - ./.env
     ports:
-      - "127.0.0.1:${DEV_HOST_PORT:-8001}:8081"
+      - 0.0.0.0:"${DEV_HOST_PORT:-8001}:8081"
       # Different port for dev (bound to localhost)
       - "127.0.0.1:${DEV_VNC_HOST_PORT:-5901}:5900"
       # Different VNC port for dev
@@ -89,7 +89,7 @@ services:
     image: node:20-slim
     container_name: ${PROXY_CONTAINER_NAME:-mcp-proxy}
     ports:
-      - "127.0.0.1:${PROXY_PORT:-9000}:9000"
+      - "${PROXY_PORT:-9000}:9000"
       # Proxy port bound to localhost
     env_file:
       - ./.env
