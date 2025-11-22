@@ -55,7 +55,7 @@ services:
     env_file:
       - ./.env
     ports:
-      - 0.0.0.0:"${DEV_HOST_PORT:-8001}:8081"
+      - "${DEV_HOST_PORT:-8001}:8081"
       # Different port for dev (bound to localhost)
       - "127.0.0.1:${DEV_VNC_HOST_PORT:-5901}:5900"
       # Different VNC port for dev
