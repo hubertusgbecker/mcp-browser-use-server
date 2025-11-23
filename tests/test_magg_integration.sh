@@ -46,7 +46,7 @@ fi
 # Check MCP server endpoint
 echo
 echo "3. Checking MCP server endpoint..."
-if curl -sf http://localhost:8081/health > /dev/null; then
+if curl -sf http://localhost:8082/health > /dev/null; then
     echo -e "${GREEN}✓ MCP server endpoint is accessible${NC}"
 else
     echo -e "${RED}✗ MCP server endpoint is not accessible${NC}"

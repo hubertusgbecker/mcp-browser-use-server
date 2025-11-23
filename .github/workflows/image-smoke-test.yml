@@ -48,14 +48,14 @@ jobs:
           # Provide a dummy OpenAI API key for container startup tests
           OPENAI_API_KEY: "test-api-key-ci"
         run: |
-          docker run -d --name mcp-ci -p 127.0.0.1:8081:8081 \
+          docker run -d --name mcp-ci -p 127.0.0.1:8082:8082 \
             -e OPENAI_API_KEY="$OPENAI_API_KEY" \
             mcp-browser-use-server:ci || (docker logs mcp-ci || true; exit 1)
 
       - name: Wait for /health
         run: |
           for i in $(seq 1 60); do
-            if curl -sS -f http://127.0.0.1:8081/health >/dev/null 2>&1; then
+            if curl -sS -f http://127.0.0.1:8082/health >/dev/null 2>&1; then
               exit 0
             fi
             sleep 1

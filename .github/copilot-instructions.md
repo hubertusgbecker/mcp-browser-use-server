@@ -750,7 +750,7 @@ class TestMyFeature:
         """Integration test with real browser.
         
         Requires:
-        - Server running on port 8081
+        - Server running on port 8082
         - Playwright browsers installed
         """
         # This test uses real browser - slower but comprehensive
@@ -784,9 +784,9 @@ async def test_with_cleanup(cleanup_tasks):
 # Integration server (auto-started)
 @pytest.mark.integration
 async def test_with_server(integration_server):
-    # Server is running on port 8081
+    # Server is running on port 8082
     async with httpx.AsyncClient() as client:
-        response = await client.get("http://localhost:8081/sse")
+        response = await client.get("http://localhost:8082/sse")
         assert response.status_code == 200
 ```
 
@@ -1439,10 +1439,10 @@ ls -la "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome"
 
 ```bash
 # Find process using port
-lsof -ti:8081
+lsof -ti:8082
 
 # Kill process
-lsof -ti:8081 | xargs kill -9
+lsof -ti:8082 | xargs kill -9
 
 # Or use different port
 uv run server --port 8082
@@ -1464,7 +1464,7 @@ uv run pytest tests/ -vv
 uv run pytest tests/test_server.py::test_name -vv
 
 # Check server port availability
-lsof -ti:8081 | xargs kill -9
+lsof -ti:8082 | xargs kill -9
 ```
 
 #### Issue: Memory leak / high memory usage
@@ -1488,20 +1488,20 @@ for session_id in list(sessions.keys()):
 
 ```bash
 # Enable debug logging
-LOG_LEVEL=DEBUG uv run server --port 8081
+LOG_LEVEL=DEBUG uv run server --port 8082
 
 # Check task status
-curl http://localhost:8081/task/{task_id}
+curl http://localhost:8082/task/{task_id}
 
 # Use headed mode to see browser
-BROWSER_HEADLESS=false uv run server --port 8081
+BROWSER_HEADLESS=false uv run server --port 8082
 ```
 
 ### Debug Mode
 
 ```bash
 # Enable comprehensive logging
-LOG_LEVEL=DEBUG uv run server --port 8081
+LOG_LEVEL=DEBUG uv run server --port 8082
 
 # Or in .env
 echo "LOG_LEVEL=DEBUG" >> .env
@@ -1621,7 +1621,7 @@ uv pip install playwright          # Add Playwright
 uv run playwright install chromium # Install browser
 
 # Running Server
-uv run server --port 8081          # SSE mode
+uv run server --port 8082          # SSE mode
 uv run server --stdio              # stdio mode
 LOG_LEVEL=DEBUG uv run server      # Debug mode
 BROWSER_HEADLESS=false uv run server  # Visible browser
@@ -1748,7 +1748,7 @@ docker-compose down -v
 
 ```bash
 # Port already in use
-lsof -ti:8081 | xargs kill -9
+lsof -ti:8082 | xargs kill -9
 
 # Missing Playwright browsers
 uv run playwright install chromium --with-deps
@@ -1848,7 +1848,7 @@ Before suggesting or approving code:
 ```bash
 # Development
 uv sync                          # Install dependencies
-uv run server --port 8081        # Run server
+uv run server --port 8082        # Run server
 LOG_LEVEL=DEBUG uv run server    # Run with debug logging
 
 # Testing

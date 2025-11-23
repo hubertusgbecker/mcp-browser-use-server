@@ -12,7 +12,7 @@ Usage:
     uv run python client/mcp_summary_client.py
 
 Environment:
-    MCP_SERVER_URL: Optional full URL to the server SSE endpoint (default: http://127.0.0.1:8081/sse)
+    MCP_SERVER_URL: Optional full URL to the server SSE endpoint (default: http://127.0.0.1:8082/sse)
 """
 
 import asyncio
@@ -59,7 +59,7 @@ def parse_host_port_from_url(url: str) -> tuple[str, int]:
     # naive parse for http://host:port/path
     m = re.match(r"https?://([^:/]+)(?::(\d+))?", url)
     if not m:
-        return "127.0.0.1", 8081
+        return "127.0.0.1", 8082
     host = m.group(1)
     port = int(m.group(2)) if m.group(2) else 80
     return host, port
@@ -231,7 +231,7 @@ async def run_session_test(session: mcp.ClientSession, tools: list) -> None:
 
 
 async def main() -> int:
-    url = os.getenv("MCP_SERVER_URL", "http://127.0.0.1:8081/sse")
+    url = os.getenv("MCP_SERVER_URL", "http://127.0.0.1:8082/sse")
     host, port = parse_host_port_from_url(url)
 
     print(f"Checking TCP port {host}:{port}...")

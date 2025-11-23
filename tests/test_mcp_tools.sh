@@ -18,7 +18,7 @@ BOLD='\033[1m'
 NC='\033[0m' # No Color
 
 # MCP Server URL
-MCP_SERVER_URL="${MCP_SERVER_URL:-http://127.0.0.1:8081/sse}"
+MCP_SERVER_URL="${MCP_SERVER_URL:-http://127.0.0.1:8082/sse}"
 
 # Function to print section headers
 print_section() {
@@ -464,7 +464,7 @@ class MCPTestRunner:
 
 
 async def main():
-    server_url = sys.argv[1] if len(sys.argv) > 1 else "http://127.0.0.1:8081/sse"
+    server_url = sys.argv[1] if len(sys.argv) > 1 else "http://127.0.0.1:8082/sse"
     runner = MCPTestRunner(server_url)
     exit_code = await runner.run_all_tests()
     sys.exit(exit_code)

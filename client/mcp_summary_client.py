@@ -40,7 +40,7 @@ def safe_load_json(text: str) -> Any:
 
 
 async def main() -> None:
-    url = "http://127.0.0.1:8081/sse"
+    url = "http://127.0.0.1:8082/sse"
     async with sse_client(url) as (read_stream, write_stream):
         async with mcp.ClientSession(read_stream, write_stream) as session:
             await session.initialize()

@@ -13,7 +13,7 @@ BLUE='\033[0;34m'
 NC='\033[0m'
 
 MCP_BIN=${MCP_BIN:-mcp}
-SERVER=${SERVER:-http://127.0.0.1:8081}
+SERVER=${SERVER:-http://127.0.0.1:8082}
 
 echo -e "${BLUE}=== MCP smoke test ===${NC}"
 echo "Using mcp: $MCP_BIN"
@@ -74,7 +74,7 @@ else
   NC='\033[0m'
 
   MCP_BIN=${MCP_BIN:-mcp}
-  SERVER=${SERVER:-http://127.0.0.1:8081}
+  SERVER=${SERVER:-http://127.0.0.1:8082}
 
   echo -e "${BLUE}=== MCP smoke test ===${NC}"
   echo "Using mcp: $MCP_BIN"

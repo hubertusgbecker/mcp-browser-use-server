@@ -120,13 +120,13 @@ Server-Sent Events mode is ideal for web-based integrations and remote access.
 
 ```bash
 # Run from source
-uv run server --port 8081
+uv run server --port 8082
 
 # Or if installed as tool
-mcp-browser-use-server run server --port 8081
+mcp-browser-use-server run server --port 8082
 ```
 
-The server will be available at `http://localhost:8081/sse`
+The server will be available at `http://localhost:8082/sse`
 
 ### stdio Mode (For Local AI Assistants)
 
@@ -139,7 +139,7 @@ uv tool uninstall mcp-browser-use-server 2>/dev/null || true
 uv tool install dist/mcp_browser_use_server-*.whl
 
 # Run with stdio transport
-mcp-browser-use-server run server --port 8081 --stdio --proxy-port 9000
+mcp-browser-use-server run server --port 8082 --stdio --proxy-port 9000
 ```
 
 Note: this package also exposes a CLI alias `mcp-browser-use-cli` that points to the same entrypoint. You can use either `mcp-browser-use-server` or `mcp-browser-use-cli` after installation.
@@ -161,7 +161,7 @@ docker-compose down
 
 # Or use Docker directly
 docker build -t mcp-browser-use-server .
-docker run --rm -p 8081:8081 -p 5900:5900 \
+docker run --rm -p 8082:8082 -p 5900:5900 \
   -e OPENAI_API_KEY=your-key \
   mcp-browser-use-server
 ```
@@ -191,7 +191,7 @@ For web-based clients and remote connections:
 {
   "mcpServers": {
     "mcp-browser-use-server": {
-      "url": "http://localhost:8081/sse"
+      "url": "http://localhost:8082/sse"
     }
   }
 }
@@ -210,7 +210,7 @@ For local AI assistants:
         "run",
         "server",
         "--port",
-        "8081",
+        "8082",
         "--stdio",
         "--proxy-port",
         "9000"
@@ -489,7 +489,7 @@ uv run pytest tests/ -vv
 uv run server --port 8001
 
 # Or find and kill the process using the port
-lsof -ti:8081 | xargs kill -9
+lsof -ti:8082 | xargs kill -9
 ```
 
 ### Debug Mode
@@ -501,7 +501,7 @@ Enable detailed logging for troubleshooting:
 LOG_LEVEL=DEBUG
 
 # Or via environment variable
-LOG_LEVEL=DEBUG uv run server --port 8081
+LOG_LEVEL=DEBUG uv run server --port 8082
 ```
 
 ## Architecture

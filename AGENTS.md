@@ -238,10 +238,10 @@ LOG_LEVEL=INFO
 **SSE Mode (Web-based):**
 ```bash
 # Run from source
-uv run server --port 8081
+uv run server --port 8082
 
 # Or if installed as package
-mcp-browser-use-server run server --port 8081
+mcp-browser-use-server run server --port 8082
 ```
 
 **stdio Mode (Local AI assistants):**
@@ -252,7 +252,7 @@ uv tool uninstall mcp-browser-use-server 2>/dev/null || true
 uv tool install dist/mcp_browser_use_server-*.whl
 
 # Run with stdio transport
-mcp-browser-use-server run server --port 8081 --stdio --proxy-port 9000
+mcp-browser-use-server run server --port 8082 --stdio --proxy-port 9000
 ```
 
 **Docker Mode:**
@@ -273,7 +273,7 @@ Test the server is running:
 
 ```bash
 # For SSE mode
-curl http://localhost:8081/sse
+curl http://localhost:8082/sse
 
 # Check server logs
 tail -f server.log
@@ -606,7 +606,7 @@ DEFAULT_WINDOW_HEIGHT=1100        # Browser window height
 {
   "mcpServers": {
     "mcp-browser-use-server": {
-      "url": "http://localhost:8081/sse"
+      "url": "http://localhost:8082/sse"
     }
   }
 }
@@ -623,7 +623,7 @@ DEFAULT_WINDOW_HEIGHT=1100        # Browser window height
         "run",
         "server",
         "--port",
-        "8081",
+        "8082",
         "--stdio",
         "--proxy-port",
         "9000"
@@ -1212,11 +1212,11 @@ ls -la "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome"
 
 **Solution:**
 ```bash
-# Find process using port 8081
-lsof -ti:8081
+# Find process using port 8082
+lsof -ti:8082
 
 # Kill the process
-lsof -ti:8081 | xargs kill -9
+lsof -ti:8082 | xargs kill -9
 
 # Or use different port
 uv run server --port 8082
@@ -1241,7 +1241,7 @@ uv run pytest tests/ -vv
 uv run pytest tests/test_server.py::test_name -vv
 
 # Check if server port is available
-lsof -ti:8081 | xargs kill -9
+lsof -ti:8082 | xargs kill -9
 ```
 
 #### Issue: Task hangs indefinitely
@@ -1251,10 +1251,10 @@ lsof -ti:8081 | xargs kill -9
 **Diagnostics:**
 ```bash
 # Enable debug logging
-LOG_LEVEL=DEBUG uv run server --port 8081
+LOG_LEVEL=DEBUG uv run server --port 8082
 
 # Check task status
-curl http://localhost:8081/task/{task_id}
+curl http://localhost:8082/task/{task_id}
 ```
 
 **Common Causes:**
@@ -1281,7 +1281,7 @@ curl http://localhost:8081/task/{task_id}
 tail -f server.log | grep cleanup
 
 # Manual cleanup
-curl -X POST http://localhost:8081/cleanup
+curl -X POST http://localhost:8082/cleanup
 ```
 
 **Prevention:**
@@ -1325,7 +1325,7 @@ cat .env
 
 **Common Issues:**
 - Missing `OPENAI_API_KEY` in docker-compose.yaml
-- Port 8081 already bound on host
+- Port 8082 already bound on host
 - Insufficient Docker resources
 
 **Solution:**
@@ -1335,7 +1335,7 @@ cat .env
 docker-compose --env-file .env up -d
 
 # Change port mapping
-# In docker-compose.yaml: "8082:8081"
+# In docker-compose.yaml: "8082:8082"
 ```
 
 ### Debug Mode
@@ -1347,7 +1347,7 @@ Enable comprehensive logging for troubleshooting:
 LOG_LEVEL=DEBUG
 
 # Or via environment
-LOG_LEVEL=DEBUG uv run server --port 8081
+LOG_LEVEL=DEBUG uv run server --port 8082
 ```
 
 **Debug Output Includes:**

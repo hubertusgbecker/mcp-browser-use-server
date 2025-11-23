@@ -1,7 +1,7 @@
 {
   "mcpServers": {
     "mcp-browser-use-server": {
-      "url": "http://localhost:8081/sse"
+      "url": "http://localhost:8082/sse"
     }
   }
 }
