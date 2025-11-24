@@ -74,7 +74,7 @@ def integration_server(request):
                 # Intentionally start the local test server for integration tests.
                 # Use absolute executable path to satisfy Bandit checks.
                 _integration_server_proc = subprocess.Popen(  # nosec: B603
-                    [uv_path, "run", "server", "--port", "8082"],
+                    [uv_path, "run", "server", "--port", "8081"],
                     stdout=logfile,
                     stderr=subprocess.STDOUT,
                 )
@@ -92,11 +92,11 @@ def integration_server(request):
             start = time.time()
             timeout = 15
             while time.time() - start < timeout:
-                if _is_port_open("127.0.0.1", 8082):
+                if _is_port_open("127.0.0.1", 8081):
                     break
                 time.sleep(0.2)
             else:
-                pytest.skip("Failed to start integration server on port 8082")
+                pytest.skip("Failed to start integration server on port 8081")
 
     yield
 

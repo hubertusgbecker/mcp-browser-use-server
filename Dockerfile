@@ -143,15 +143,15 @@ RUN groupadd -r appuser && useradd -r -g appuser -d /home/appuser -s /sbin/nolog
 USER appuser
 RUN /app/.venv/bin/playwright install chromium
 
-EXPOSE 8082
+EXPOSE 8081
 
 # Use the repository entrypoint which is safer and easier to maintain
 ENTRYPOINT ["/usr/local/bin/docker-entrypoint.sh"]
 
 # Simple healthcheck to satisfy scanners (uses curl to check server availability)
-HEALTHCHECK --interval=30s --timeout=10s --start-period=20s --retries=3 CMD curl -f http://127.0.0.1:8082/health || exit 1
+HEALTHCHECK --interval=30s --timeout=10s --start-period=20s --retries=3 CMD curl -f http://127.0.0.1:8081/health || exit 1
 
 # Default command: run the server in the foreground so containers stay up
 # when no explicit command is provided. Users can still override this by
 # passing a different command to `docker run`.
-CMD ["/app/.venv/bin/mcp-browser-use-server", "run", "server", "--port", "8082", "--log-level", "INFO"]
+CMD ["/app/.venv/bin/mcp-browser-use-server", "run", "server", "--port", "8081", "--log-level", "INFO"]

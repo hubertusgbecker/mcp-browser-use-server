@@ -72,7 +72,7 @@ def cli():
 
 @cli.command()
 @click.argument("subcommand")
-@click.option("--port", default=8082, help="Port to listen on for SSE")
+@click.option("--port", default=8081, help="Port to listen on for SSE")
 @click.option(
     "--proxy-port",
     default=None,

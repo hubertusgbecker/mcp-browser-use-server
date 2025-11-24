@@ -238,10 +238,10 @@ LOG_LEVEL=INFO
 **SSE Mode (Web-based):**
 ```bash
 # Run from source
-uv run server --port 8082
+uv run server --port 8081
 
 # Or if installed as package
-mcp-browser-use-server run server --port 8082
+mcp-browser-use-server run server --port 8081
 ```
 
 **stdio Mode (Local AI assistants):**
@@ -252,7 +252,7 @@ uv tool uninstall mcp-browser-use-server 2>/dev/null || true
 uv tool install dist/mcp_browser_use_server-*.whl
 
 # Run with stdio transport
-mcp-browser-use-server run server --port 8082 --stdio --proxy-port 9000
+mcp-browser-use-server run server --port 8081 --stdio --proxy-port 9000
 ```
 
 **Docker Mode:**
@@ -273,7 +273,7 @@ Test the server is running:
 
 ```bash
 # For SSE mode
-curl http://localhost:8082/sse
+curl http://localhost:8081/sse
 
 # Check server logs
 tail -f server.log
@@ -606,7 +606,7 @@ DEFAULT_WINDOW_HEIGHT=1100        # Browser window height
 {
   "mcpServers": {
     "mcp-browser-use-server": {
-      "url": "http://localhost:8082/sse"
+      "url": "http://localhost:8081/sse"
     }
   }
 }
@@ -623,7 +623,7 @@ DEFAULT_WINDOW_HEIGHT=1100        # Browser window height
         "run",
         "server",
         "--port",
-        "8082",
+        "8081",
         "--stdio",
         "--proxy-port",
         "9000"
@@ -659,10 +659,10 @@ task = """
 2. Extract the first 3 quotes with their authors
 3. Save results to quotes.json
 4. Return the formatted JSON
-"""
+uv run server --port ${HOST_PORT:-8081}
 ```
 
-**Why this works:**
+mcp-browser-use-server run server --port ${HOST_PORT:-8081}
 - Clear step-by-step instructions
 - Specifies exact actions and data
 - Defines output format
@@ -673,7 +673,7 @@ task = """
 task = "Get some quotes from the internet"
 ```
 
-**Problems:**
+mcp-browser-use-server run server --port ${HOST_PORT:-8081} --stdio --proxy-port ${PROXY_PORT:-9000}
 - Unclear source
 - No format specified
 - Ambiguous quantity
@@ -1014,10 +1014,11 @@ if tool_name == "my_new_tool":
         
         return [mcp.types.TextContent(
             type="text",
+    ```
             text=json.dumps(result, indent=2)
         )]
     except Exception as e:
-        logger.error(f"Error in my_new_tool: {e}")
+    curl http://localhost:${HOST_PORT:-8081}/sse
         return [mcp.types.TextContent(
             type="text",
             text=f"Error: {str(e)}"
@@ -1069,11 +1070,11 @@ async def use_session(session_id: str):
     await session.click_element(0)
     
     # Extract
-    content = await session.extract_content("Get all links")
-    
-    return content
-```
-
+        "mcpServers": {
+          "mcp-browser-use-server": {
+            "url": "http://localhost:${HOST_PORT:-8081}/sse"
+          }
+        }
 **Cleanup:**
 ```python
 async def cleanup_session(session_id: str):
@@ -1085,10 +1086,10 @@ async def cleanup_session(session_id: str):
 
 ### Error Handling Pattern
 
-```python
+              "${HOST_PORT:-8081}",
 async def safe_operation(param: str) -> Dict[str, Any]:
     """Template for error-safe operations.
-    
+              "${PROXY_PORT:-9000}"
     Args:
         param: Operation parameter
         
@@ -1212,14 +1213,14 @@ ls -la "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome"
 
 **Solution:**
 ```bash
-# Find process using port 8082
-lsof -ti:8082
+# Find process using port 8081
+lsof -ti:8081
 
 # Kill the process
-lsof -ti:8082 | xargs kill -9
+lsof -ti:8081 | xargs kill -9
 
 # Or use different port
-uv run server --port 8082
+uv run server --port 8081
 ```
 
 #### Issue: Tests failing
@@ -1241,7 +1242,7 @@ uv run pytest tests/ -vv
 uv run pytest tests/test_server.py::test_name -vv
 
 # Check if server port is available
-lsof -ti:8082 | xargs kill -9
+lsof -ti:8081 | xargs kill -9
 ```
 
 #### Issue: Task hangs indefinitely
@@ -1251,10 +1252,10 @@ lsof -ti:8082 | xargs kill -9
 **Diagnostics:**
 ```bash
 # Enable debug logging
-LOG_LEVEL=DEBUG uv run server --port 8082
+LOG_LEVEL=DEBUG uv run server --port 8081
 
 # Check task status
-curl http://localhost:8082/task/{task_id}
+curl http://localhost:8081/task/{task_id}
 ```
 
 **Common Causes:**
@@ -1281,7 +1282,7 @@ curl http://localhost:8082/task/{task_id}
 tail -f server.log | grep cleanup
 
 # Manual cleanup
-curl -X POST http://localhost:8082/cleanup
+curl -X POST http://localhost:8081/cleanup
 ```
 
 **Prevention:**
@@ -1325,7 +1326,7 @@ cat .env
 
 **Common Issues:**
 - Missing `OPENAI_API_KEY` in docker-compose.yaml
-- Port 8082 already bound on host
+- Port 8081 already bound on host
 - Insufficient Docker resources
 
 **Solution:**
@@ -1335,7 +1336,7 @@ cat .env
 docker-compose --env-file .env up -d
 
 # Change port mapping
-# In docker-compose.yaml: "8082:8082"
+# In docker-compose.yaml: "8081:8081"
 ```
 
 ### Debug Mode
@@ -1347,7 +1348,7 @@ Enable comprehensive logging for troubleshooting:
 LOG_LEVEL=DEBUG
 
 # Or via environment
-LOG_LEVEL=DEBUG uv run server --port 8082
+LOG_LEVEL=DEBUG uv run server --port 8081
 ```
 
 **Debug Output Includes:**

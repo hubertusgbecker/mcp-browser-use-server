@@ -2438,7 +2438,7 @@ def create_mcp_server(
 
 
 @click.command()
-@click.option("--port", default=8082, help="Port to listen on for SSE")
+@click.option("--port", default=8081, help="Port to listen on for SSE")
 @click.option(
     "--proxy-port",
     default=None,

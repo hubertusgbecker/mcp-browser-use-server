@@ -132,7 +132,7 @@ class TestServerEndpoints:
         """Test health check endpoint (if implemented)."""
         import httpx
 
-        url = "http://localhost:8082/health"
+        url = "http://localhost:8081/health"
         try:
             async with httpx.AsyncClient(timeout=5) as client:
                 resp = await client.get(url)
@@ -147,7 +147,7 @@ class TestServerEndpoints:
         """Test SSE endpoint accessibility."""
         import httpx
 
-        url = "http://localhost:8082/sse"
+        url = "http://localhost:8081/sse"
         try:
             async with httpx.AsyncClient(timeout=5) as client:
                 # Use streaming to avoid waiting for the entire (infinite) SSE stream
