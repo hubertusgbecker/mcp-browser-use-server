@@ -62,7 +62,7 @@ class TestDockerIntegration:
         task_instruction = (
             "Navigate to https://example.com and get the page title"
         )
-        
+
         python_code = f"""
 import asyncio
 import json
