@@ -1,13 +1,26 @@
 """Integration tests for mcp-browser-use-server."""
 
+import os
 import shutil
 import subprocess  # nosec: B404 - test-only subprocess usage
 
 import pytest
 
+# Load environment variables for consistent configuration
+try:
+    from dotenv import load_dotenv
+    load_dotenv()
+except ImportError:
+    pass
+
 # Resolve external tool paths once at module import time for use in skipifs
 docker_path = shutil.which("docker")
-python_path = shutil.which("python")
+# Try python3 first, then python
+python_path = shutil.which("python3") or shutil.which("python")
+
+# Get port configurations from environment (for consistency with docker-compose)
+HOST_PORT = int(os.getenv("HOST_PORT", "8081"))
+DOCKER_CONTAINER_NAME = os.getenv("CONTAINER_NAME", "mcp-browser-use-server")
 
 
 class TestDockerIntegration:
@@ -25,7 +38,7 @@ class TestDockerIntegration:
                 docker_path,
                 "ps",
                 "--filter",
-                "name=mcp-browser-use-server",
+                f"name={DOCKER_CONTAINER_NAME}",
                 "--format",
                 "{{.Names}}",
             ],
@@ -49,12 +62,11 @@ class TestDockerIntegration:
         task_instruction = (
             "Navigate to https://example.com and get the page title"
         )
-
+        
         python_code = f"""
 import asyncio
 import json
 import os
-from langchain_openai import ChatOpenAI
 from server.server import run_browser_task_async, task_store, init_configuration
 
 async def run_task():
@@ -65,14 +77,13 @@ async def run_task():
         print('SKIP: No valid API key')
         return
 
-    model_name = os.getenv('LLM_MODEL', 'gpt-5-mini')
-    llm = ChatOpenAI(model=model_name, api_key=api_key, temperature=0)
     task_id = 'integration-test-001'
 
+    # Let run_browser_task_async create its own LLM
     await run_browser_task_async(
         task_id=task_id,
         instruction='{task_instruction}',
-        llm=llm,
+        llm=None,
         config=config,
     )
 
@@ -99,8 +110,8 @@ asyncio.run(run_task())
                     docker_path,
                     "exec",
                     "-i",
-                    "mcp-browser-use-server",
-                    python_path,
+                    DOCKER_CONTAINER_NAME,
+                    "python3",  # Use python3 command in container, not host path
                     "-c",
                     python_code,
                 ],
@@ -132,7 +143,7 @@ class TestServerEndpoints:
         """Test health check endpoint (if implemented)."""
         import httpx
 
-        url = "http://localhost:8081/health"
+        url = f"http://localhost:{HOST_PORT}/health"
         try:
             async with httpx.AsyncClient(timeout=5) as client:
                 resp = await client.get(url)
@@ -147,7 +158,7 @@ class TestServerEndpoints:
         """Test SSE endpoint accessibility."""
         import httpx
 
-        url = "http://localhost:8081/sse"
+        url = f"http://localhost:{HOST_PORT}/sse"
         try:
             async with httpx.AsyncClient(timeout=5) as client:
                 # Use streaming to avoid waiting for the entire (infinite) SSE stream

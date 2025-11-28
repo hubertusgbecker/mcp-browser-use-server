@@ -37,6 +37,10 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "src"))
 # Integration server process handle (shared across tests)
 _integration_server_proc = None
 
+# Get port configurations from environment (for consistency with docker-compose)
+HOST_PORT = int(os.getenv("HOST_PORT", "8081"))
+DOCKER_CONTAINER_NAME = os.getenv("CONTAINER_NAME", "mcp-browser-use-server")
+
 
 def _is_port_open(host: str, port: int) -> bool:
     """Check if TCP port is open on host."""
@@ -74,7 +78,7 @@ def integration_server(request):
                 # Intentionally start the local test server for integration tests.
                 # Use absolute executable path to satisfy Bandit checks.
                 _integration_server_proc = subprocess.Popen(  # nosec: B603
-                    [uv_path, "run", "server", "--port", "8081"],
+                    [uv_path, "run", "server", "--port", str(HOST_PORT)],
                     stdout=logfile,
                     stderr=subprocess.STDOUT,
                 )
@@ -92,11 +96,11 @@ def integration_server(request):
             start = time.time()
             timeout = 15
             while time.time() - start < timeout:
-                if _is_port_open("127.0.0.1", 8081):
+                if _is_port_open("127.0.0.1", HOST_PORT):
                     break
                 time.sleep(0.2)
             else:
-                pytest.skip("Failed to start integration server on port 8081")
+                pytest.skip(f"Failed to start integration server on port {HOST_PORT}")
 
     yield
 
