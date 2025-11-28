@@ -19,6 +19,9 @@ RED='\033[0;31m'
 YELLOW='\033[1;33m'
 NC='\033[0m' # No Color
 
+# Get port from environment or default
+HOST_PORT=${HOST_PORT:-8081}
+
 # Check if Docker container is running
 echo "1. Checking Docker container status..."
 if docker ps | grep -q mcp-browser-use-server; then
@@ -46,7 +49,7 @@ fi
 # Check MCP server endpoint
 echo
 echo "3. Checking MCP server endpoint..."
-if curl -sf http://localhost:8081/health > /dev/null; then
+if curl -sf http://localhost:${HOST_PORT}/health > /dev/null; then
     echo -e "${GREEN}✓ MCP server endpoint is accessible${NC}"
 else
     echo -e "${RED}✗ MCP server endpoint is not accessible${NC}"

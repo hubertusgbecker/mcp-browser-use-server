@@ -154,4 +154,4 @@ HEALTHCHECK --interval=30s --timeout=10s --start-period=20s --retries=3 CMD curl
 # Default command: run the server in the foreground so containers stay up
 # when no explicit command is provided. Users can still override this by
 # passing a different command to `docker run`.
-CMD ["/app/.venv/bin/mcp-browser-use-server", "run", "server", "--port", "8081", "--log-level", "INFO"]
+CMD ["sh", "-c", "/app/.venv/bin/mcp-browser-use-server run server --port ${PORT:-8081} --log-level INFO"]
