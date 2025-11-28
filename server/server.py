@@ -2634,7 +2634,9 @@ def main(
             # as the request is effectively delivered but the SSE consumer
             # went away.
             closed_error = False
-            if _anyio is not None and isinstance(exc, _anyio.ClosedResourceError):
+            if _anyio is not None and isinstance(
+                exc, _anyio.ClosedResourceError
+            ):
                 closed_error = True
 
             if closed_error:
