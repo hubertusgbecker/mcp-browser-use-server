@@ -294,3 +294,23 @@ class TestLogLevelConfiguration:
         level = getattr(logging, "INVALID_LEVEL", logging.INFO)
         if level != logging.INFO:
             pytest.fail("Invalid level did not fall back to INFO")
+
+
+class TestChatOpenAIAdapter:
+    """Test ChatOpenAIAdapter class."""
+
+    @pytest.mark.asyncio
+    async def test_adapter_initializes_with_chatopenai(self):
+        """Test ChatOpenAIAdapter initialization with ChatOpenAI instance.
+        
+        Verifies:
+        - Adapter accepts ChatOpenAI instance
+        - Internal _llm attribute is set correctly
+        """
+        from langchain_openai import ChatOpenAI
+        from server.server import ChatOpenAIAdapter
+        
+        llm = ChatOpenAI(model="gpt-4o-mini", api_key="test-key")
+        adapter = ChatOpenAIAdapter(llm)
+        
+        assert adapter._llm is llm
