@@ -495,3 +495,26 @@ class TestLLMProviderInitialization:
             
             # Should complete despite setattr exception
             assert result.exit_code == 0
+
+
+@pytest.mark.skipif(CliRunner is None, reason="click not installed")
+class TestMainEntryPoint:
+    """Test __main__ entry point."""
+
+    def test_main_entry_point_via_subprocess(self):
+        """Test that module can be run as __main__ (line 304)."""
+        import subprocess
+        import sys
+        
+        # Run the module as __main__ with --help to verify it works
+        # This exercises the if __name__ == "__main__": cli() line
+        result = subprocess.run(
+            [sys.executable, "-m", "mcp_browser_use_server.cli", "--help"],
+            capture_output=True,
+            text=True,
+            timeout=5
+        )
+        
+        # Should exit successfully and show help
+        assert result.returncode == 0
+        assert "MCP Browser Use Server" in result.stdout or "Usage:" in result.stdout
