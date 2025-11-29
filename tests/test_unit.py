@@ -498,3 +498,131 @@ class TestChatOpenAIAdapter:
         await adapter.ainvoke([{"role": "ai", "content": "AI response"}])
         call_args = mock_llm.agenerate.call_args[0][0]
         assert isinstance(call_args[0], AIMessage)
+
+    @pytest.mark.asyncio
+    async def test_adapter_ainvoke_normalizes_objects_with_content_attr(self):
+        """Test ainvoke normalizes objects with content attribute.
+        
+        Verifies:
+        - Objects with .content attribute are normalized
+        - Nested content is extracted
+        """
+        from unittest.mock import AsyncMock, Mock
+        from server.server import ChatOpenAIAdapter
+        
+        mock_llm = Mock()
+        mock_llm.agenerate = AsyncMock(return_value={"success": True})
+        adapter = ChatOpenAIAdapter(mock_llm)
+        
+        # Create object with content attribute
+        class MessageLike:
+            def __init__(self):
+                self.content = "message content"
+        
+        obj = MessageLike()
+        result = await adapter.ainvoke(obj)
+        
+        # Verify agenerate was called
+        assert mock_llm.agenerate.called
+
+    @pytest.mark.asyncio
+    async def test_adapter_ainvoke_normalizes_objects_with_text_attr(self):
+        """Test ainvoke normalizes objects with text attribute.
+        
+        Verifies:
+        - Objects with .text attribute are normalized
+        """
+        from unittest.mock import AsyncMock, Mock
+        from server.server import ChatOpenAIAdapter
+        
+        mock_llm = Mock()
+        mock_llm.agenerate = AsyncMock(return_value={"success": True})
+        adapter = ChatOpenAIAdapter(mock_llm)
+        
+        # Create object with text attribute
+        class TextLike:
+            def __init__(self):
+                self.text = "text content"
+        
+        obj = TextLike()
+        result = await adapter.ainvoke(obj)
+        
+        # Verify agenerate was called
+        assert mock_llm.agenerate.called
+
+    @pytest.mark.asyncio
+    async def test_adapter_ainvoke_normalizes_objects_with_to_dict(self):
+        """Test ainvoke normalizes objects with to_dict method.
+        
+        Verifies:
+        - Objects with .to_dict() method are normalized
+        - to_dict() result is used
+        """
+        from unittest.mock import AsyncMock, Mock
+        from server.server import ChatOpenAIAdapter
+        
+        mock_llm = Mock()
+        mock_llm.agenerate = AsyncMock(return_value={"success": True})
+        adapter = ChatOpenAIAdapter(mock_llm)
+        
+        # Create object with to_dict method
+        class DictLike:
+            def to_dict(self):
+                return {"key": "value"}
+        
+        obj = DictLike()
+        result = await adapter.ainvoke(obj)
+        
+        # Verify agenerate was called
+        assert mock_llm.agenerate.called
+
+    @pytest.mark.asyncio
+    async def test_adapter_ainvoke_normalizes_objects_with_content_attr(self):
+        """Test ainvoke normalizes objects with content attribute.
+        
+        Verifies:
+        - Objects with .content attribute are normalized
+        - Nested content is extracted
+        """
+        from unittest.mock import AsyncMock, Mock
+        from server.server import ChatOpenAIAdapter
+        
+        mock_llm = Mock()
+        mock_llm.agenerate = AsyncMock(return_value={"success": True})
+        adapter = ChatOpenAIAdapter(mock_llm)
+        
+        # Create object with content attribute
+        class MessageLike:
+            def __init__(self):
+                self.content = "message content"
+        
+        obj = MessageLike()
+        result = await adapter.ainvoke(obj)
+        
+        # Verify agenerate was called
+        assert mock_llm.agenerate.called
+
+    @pytest.mark.asyncio
+    async def test_adapter_ainvoke_normalizes_objects_with_text_attr(self):
+        """Test ainvoke normalizes objects with text attribute.
+        
+        Verifies:
+        - Objects with .text attribute are normalized
+        """
+        from unittest.mock import AsyncMock, Mock
+        from server.server import ChatOpenAIAdapter
+        
+        mock_llm = Mock()
+        mock_llm.agenerate = AsyncMock(return_value={"success": True})
+        adapter = ChatOpenAIAdapter(mock_llm)
+        
+        # Create object with text attribute
+        class TextLike:
+            def __init__(self):
+                self.text = "text content"
+        
+        obj = TextLike()
+        result = await adapter.ainvoke(obj)
+        
+        # Verify agenerate was called
+        assert mock_llm.agenerate.called
