@@ -19,8 +19,17 @@ RED='\033[0;31m'
 YELLOW='\033[1;33m'
 NC='\033[0m' # No Color
 
+# Source .env file if it exists and HOST_PORT is not already set
+if [ -z "${HOST_PORT:-}" ] && [ -f ".env" ]; then
+    echo "Reading configuration from .env file..."
+    # Export HOST_PORT from .env if present
+    export $(grep -E "^HOST_PORT=" .env | xargs)
+fi
+
 # Get port from environment or default
 HOST_PORT=${HOST_PORT:-8081}
+echo "Using port: ${HOST_PORT}"
+echo
 
 # Check if Docker container is running
 echo "1. Checking Docker container status..."
@@ -52,7 +61,17 @@ echo "3. Checking MCP server endpoint..."
 if curl -sf http://localhost:${HOST_PORT}/health > /dev/null; then
     echo -e "${GREEN}✓ MCP server endpoint is accessible${NC}"
 else
-    echo -e "${RED}✗ MCP server endpoint is not accessible${NC}"
+    echo -e "${RED}✗ MCP server endpoint is not accessible at http://localhost:${HOST_PORT}/health${NC}"
+    echo
+    echo "Troubleshooting:"
+    echo "  1. Check if container is running on a different port:"
+    echo "     docker ps | grep mcp-browser-use-server"
+    echo
+    echo "  2. Check container logs:"
+    echo "     docker logs mcp-browser-use-server"
+    echo
+    echo "  3. Verify HOST_PORT in .env matches the container port"
+    echo
     exit 1
 fi
 
@@ -87,10 +106,10 @@ fi
 echo
 echo "6. Testing browser tools availability through Magg..."
 TOOLS_OUTPUT=$(mbro -n 'connect magg http://localhost:8000/mcp; tools' 2>&1 || true)
-if echo "$TOOLS_OUTPUT" | grep -q "browser_browser_use"; then
+if echo "$TOOLS_OUTPUT" | grep -q "use_browser_use"; then
     echo -e "${GREEN}✓ Browser tools are available through Magg${NC}"
     echo "   Available browser tools:"
-    echo "$TOOLS_OUTPUT" | grep "^browser_" | sed 's/^/   - /'
+    echo "$TOOLS_OUTPUT" | grep "^use_browser_" | sed 's/^/   - /'
 else
     echo -e "${RED}✗ Browser tools not found in Magg${NC}"
     echo "Output: $TOOLS_OUTPUT"
@@ -100,7 +119,7 @@ fi
 # Test the hubertusbecker.com summary
 echo
 echo "7. Testing hubertusbecker.com summary (300 chars)..."
-SUMMARY_OUTPUT=$(mbro --json -n 'connect magg http://localhost:8000/mcp; call browser_browser_use url=https://hubertusbecker.com action="Navigate to the website and extract all text content. Summarize in exactly 300 characters."' 2>&1 || true)
+SUMMARY_OUTPUT=$(mbro --json -n 'connect magg http://localhost:8000/mcp; call use_browser_use url=https://hubertusbecker.com action="Navigate to the website and extract all text content. Summarize in exactly 300 characters."' 2>&1 || true)
 
 # Extract just the text field which contains the actual result JSON
 RESULT_JSON=$(echo "$SUMMARY_OUTPUT" | grep -o '"text": "{[^}]*}' | sed 's/"text": "//; s/\\"/"/g' || echo "")

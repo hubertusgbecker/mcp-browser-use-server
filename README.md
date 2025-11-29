@@ -282,6 +282,37 @@ uv run ruff check .
 - **Integration Tests**: Test component interactions
 - **E2E Tests**: Full system tests (require `RUN_E2E_TESTS=true`)
 - **Performance Tests**: Load and performance validation
+- **MAGG Integration Tests**: Shell script for testing Magg aggregator integration
+
+### MAGG Integration Testing
+
+The project includes a shell script for validating integration with the [Magg](https://github.com/sparfenyuk/magg) aggregator:
+
+```bash
+# Run MAGG integration test
+./tests/test_magg_integration.sh
+
+# The script automatically:
+# - Reads HOST_PORT from .env file if present
+# - Checks Docker container status and health
+# - Verifies Magg configuration
+# - Tests browser tools availability through Magg
+# - Validates end-to-end browser automation (hubertusbecker.com summary)
+```
+
+**Requirements**:
+- Docker container running on the configured port (default: 8081)
+- Magg running and configured (see `.magg/config.json`)
+- The `mbro` command-line tool available
+
+**Port Configuration**: The script automatically reads `HOST_PORT` from `.env`:
+
+```bash
+# .env
+HOST_PORT=8083  # Match your docker-compose port mapping
+```
+
+If the health check fails, the script provides troubleshooting steps.
 
 ### CI/CD Integration
 

@@ -3,7 +3,7 @@
     "mcp-browser-use": {
       "name": "mcp-browser-use",
       "source": "https://github.com/hubertusgbecker/mcp-browser-use-server",
-      "prefix": "browser",
+      "prefix": "use",
       "enabled": true,
       "uri": "http://localhost:8083/sse"
     }
