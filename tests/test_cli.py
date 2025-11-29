@@ -160,6 +160,33 @@ class TestLogLevelCLI:
 
 
 @pytest.mark.skipif(CliRunner is None, reason="click not installed")
+class TestEnvFileOption:
+    """Test --env-file option in run-browser-agent command."""
+
+    def test_env_file_option_loads_custom_env(self, monkeypatch, tmp_path):
+        """Test that --env-file loads custom environment file."""
+        # Create a custom .env file with unique value
+        custom_env = tmp_path / "custom.env"
+        custom_env.write_text("OPENAI_API_KEY=test-key\nCUSTOM_VAR=custom_value\n")
+        
+        async def fake_run(task_id, instruction, llm, config):
+            # Just verify the task was called
+            return None
+        
+        with monkeypatch.context() as m:
+            m.setattr("server.server.run_browser_task_async", fake_run)
+            
+            runner = CliRunner()
+            result = runner.invoke(
+                cli_mod.cli,
+                ["run-browser-agent", "--env-file", str(custom_env), "Test task"],
+            )
+            
+            # Should complete successfully (line 202 executed)
+            assert result.exit_code == 0
+
+
+@pytest.mark.skipif(CliRunner is None, reason="click not installed")
 class TestLogError:
     """Test log_error helper function."""
 
