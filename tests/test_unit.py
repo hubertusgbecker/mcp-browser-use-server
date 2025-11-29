@@ -333,3 +333,44 @@ class TestChatOpenAIAdapter:
         provider = adapter.provider
         assert isinstance(provider, str)
         assert provider in ["openai", "azure"]  # Common provider values
+
+    @pytest.mark.asyncio
+    async def test_adapter_getattr_delegation(self):
+        """Test ChatOpenAIAdapter __getattr__ delegates to underlying LLM.
+        
+        Verifies:
+        - __getattr__ delegates attribute access to _llm
+        - Can access underlying LLM attributes through adapter
+        """
+        from langchain_openai import ChatOpenAI
+        from server.server import ChatOpenAIAdapter
+        
+        llm = ChatOpenAI(model="gpt-4o-mini", api_key="test-key")
+        adapter = ChatOpenAIAdapter(llm)
+        
+        # Access attribute through delegation
+        # model_name should be delegated to underlying LLM
+        assert hasattr(adapter, "model_name")
+        assert adapter.model_name == llm.model_name
+
+    @pytest.mark.asyncio
+    async def test_adapter_getattr_calls_underlying_llm(self):
+        """Test __getattr__ actually calls getattr on underlying LLM.
+        
+        Verifies:
+        - Accessing non-existent attribute triggers __getattr__
+        - Returns value from underlying LLM
+        """
+        from unittest.mock import Mock
+        from server.server import ChatOpenAIAdapter
+        
+        # Create a mock LLM with a custom attribute
+        mock_llm = Mock()
+        mock_llm.custom_test_attribute = "test_value_123"
+        mock_llm.temperature = 0.7
+        
+        adapter = ChatOpenAIAdapter(mock_llm)
+        
+        # Access custom attributes - should trigger __getattr__
+        assert adapter.custom_test_attribute == "test_value_123"
+        assert adapter.temperature == 0.7
