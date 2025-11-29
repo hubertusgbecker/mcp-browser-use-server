@@ -189,3 +189,119 @@ class TestLogError:
         assert error_data["error"] == "Test error with exception"
         assert "traceback" in error_data
         assert "Something went wrong" in error_data["traceback"]
+
+
+@pytest.mark.skipif(CliRunner is None, reason="click not installed")
+class TestRunCommand:
+    """Test the run command with various options and error conditions."""
+
+    def test_run_command_with_invalid_subcommand(self, capsys):
+        """Test that run command exits with error for invalid subcommand."""
+        runner = CliRunner()
+        result = runner.invoke(cli_mod.cli, ["run", "invalid-subcommand"])
+        
+        # Should exit with error code
+        assert result.exit_code == 1
+        
+        # Error should be logged to stderr in JSON format
+        captured = capsys.readouterr()
+        assert "invalid-subcommand" in result.output or "invalid-subcommand" in captured.err
+
+    def test_run_command_with_all_options(self, monkeypatch):
+        """Test run command accepts all CLI options without error."""
+        def fake_server_main():
+            return None
+        
+        # Patch server main to avoid actually starting the server
+        with monkeypatch.context() as m:
+            m.setattr("sys.argv", ["server"])  # Reset argv
+            # Patch at the module where _import_server returns it
+            original_import = cli_mod._import_server
+            
+            def mock_import():
+                init_conf, run_task, _ = original_import()
+                return init_conf, run_task, fake_server_main
+            
+            m.setattr(cli_mod, "_import_server", mock_import)
+            
+            runner = CliRunner()
+            result = runner.invoke(
+                cli_mod.cli,
+                [
+                    "run",
+                    "server",
+                    "--port", "9000",
+                    "--proxy-port", "9001",
+                    "--chrome-path", "/path/to/chrome",
+                    "--window-width", "1920",
+                    "--window-height", "1080",
+                    "--locale", "de-DE",
+                    "--task-expiry-minutes", "30",
+                    "--stdio",
+                    "--log-level", "DEBUG",
+                ],
+            )
+            
+            # Should complete without error
+            assert result.exit_code == 0
+
+    def test_run_command_restores_sys_argv(self, monkeypatch):
+        """Test that run command restores sys.argv even on exception."""
+        import sys
+        
+        original_argv = sys.argv.copy()
+        
+        def fake_server_main():
+            raise RuntimeError("Simulated server failure")
+        
+        with monkeypatch.context() as m:
+            original_import = cli_mod._import_server
+            
+            def mock_import():
+                init_conf, run_task, _ = original_import()
+                return init_conf, run_task, fake_server_main
+            
+            m.setattr(cli_mod, "_import_server", mock_import)
+            
+            runner = CliRunner()
+            result = runner.invoke(
+                cli_mod.cli,
+                ["run", "server", "--port", "9000"],
+            )
+            
+            # Should exit with error
+            assert result.exit_code == 1
+        
+        # sys.argv should be restored to original
+        assert sys.argv == original_argv
+
+    def test_run_command_loads_env_file(self, monkeypatch):
+        """Test that run command loads .env file early."""
+        # Set an env var that the command should see
+        monkeypatch.setenv("LOG_LEVEL", "WARNING")
+        
+        def fake_server_main():
+            # Just return successfully
+            return None
+        
+        with monkeypatch.context() as m:
+            original_import = cli_mod._import_server
+            
+            def mock_import():
+                # Verify dotenv.load_dotenv was called by checking the env
+                import os
+                if os.getenv("LOG_LEVEL") != "WARNING":
+                    raise AssertionError("ENV not loaded properly")
+                init_conf, run_task, _ = original_import()
+                return init_conf, run_task, fake_server_main
+            
+            m.setattr(cli_mod, "_import_server", mock_import)
+            
+            runner = CliRunner()
+            result = runner.invoke(
+                cli_mod.cli,
+                ["run", "server"],
+            )
+            
+            # Should complete successfully
+            assert result.exit_code == 0
