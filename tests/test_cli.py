@@ -157,3 +157,35 @@ class TestLogLevelCLI:
         run_cli_with_fake_run(
             cli_mod, ["run-browser-agent", "Test task"], monkeypatch
         )
+
+
+@pytest.mark.skipif(CliRunner is None, reason="click not installed")
+class TestLogError:
+    """Test log_error helper function."""
+
+    def test_log_error_outputs_json_to_stderr(self, capsys):
+        """Test that log_error outputs JSON-formatted error to stderr."""
+        cli_mod.log_error("Test error message")
+        captured = capsys.readouterr()
+        
+        # Should output to stderr
+        assert captured.err.strip() != ""
+        
+        # Should be valid JSON
+        error_data = json.loads(captured.err.strip())
+        assert "error" in error_data
+        assert error_data["error"] == "Test error message"
+        assert error_data["traceback"] is None
+
+    def test_log_error_with_exception(self, capsys):
+        """Test that log_error includes exception details when provided."""
+        test_exception = ValueError("Something went wrong")
+        cli_mod.log_error("Test error with exception", test_exception)
+        captured = capsys.readouterr()
+        
+        # Should be valid JSON
+        error_data = json.loads(captured.err.strip())
+        assert "error" in error_data
+        assert error_data["error"] == "Test error with exception"
+        assert "traceback" in error_data
+        assert "Something went wrong" in error_data["traceback"]
