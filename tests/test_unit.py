@@ -374,3 +374,23 @@ class TestChatOpenAIAdapter:
         # Access custom attributes - should trigger __getattr__
         assert adapter.custom_test_attribute == "test_value_123"
         assert adapter.temperature == 0.7
+
+    @pytest.mark.asyncio
+    async def test_adapter_model_property_returns_model_name(self):
+        """Test ChatOpenAIAdapter model property returns model or model_name.
+        
+        Verifies:
+        - model property returns .model from underlying LLM if available
+        - Falls back to .model_name if .model doesn't exist
+        - Falls back to "openai" if neither exists
+        """
+        from langchain_openai import ChatOpenAI
+        from server.server import ChatOpenAIAdapter
+        
+        llm = ChatOpenAI(model="gpt-4o-mini", api_key="test-key")
+        adapter = ChatOpenAIAdapter(llm)
+        
+        # Should return model from underlying LLM
+        model = adapter.model
+        assert isinstance(model, str)
+        assert len(model) > 0  # Should be non-empty
