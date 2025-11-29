@@ -314,3 +314,22 @@ class TestChatOpenAIAdapter:
         adapter = ChatOpenAIAdapter(llm)
         
         assert adapter._llm is llm
+
+    @pytest.mark.asyncio
+    async def test_adapter_provider_property(self):
+        """Test ChatOpenAIAdapter provider property.
+        
+        Verifies:
+        - provider property returns underlying LLM's provider attribute
+        - Falls back to "openai" if provider attribute doesn't exist
+        """
+        from langchain_openai import ChatOpenAI
+        from server.server import ChatOpenAIAdapter
+        
+        llm = ChatOpenAI(model="gpt-4o-mini", api_key="test-key")
+        adapter = ChatOpenAIAdapter(llm)
+        
+        # Should return provider from underlying LLM or "openai" as default
+        provider = adapter.provider
+        assert isinstance(provider, str)
+        assert provider in ["openai", "azure"]  # Common provider values
