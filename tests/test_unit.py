@@ -394,3 +394,29 @@ class TestChatOpenAIAdapter:
         model = adapter.model
         assert isinstance(model, str)
         assert len(model) > 0  # Should be non-empty
+
+    @pytest.mark.asyncio
+    async def test_adapter_ainvoke_with_simple_message(self):
+        """Test ChatOpenAIAdapter ainvoke with simple string message.
+        
+        Verifies:
+        - ainvoke normalizes and converts messages
+        - Calls underlying LLM's agenerate method
+        - Returns result from underlying LLM
+        """
+        from unittest.mock import AsyncMock, Mock
+        from server.server import ChatOpenAIAdapter
+        
+        # Create mock LLM with agenerate method
+        mock_llm = Mock()
+        mock_response = {"generations": [[{"text": "test response"}]]}
+        mock_llm.agenerate = AsyncMock(return_value=mock_response)
+        
+        adapter = ChatOpenAIAdapter(mock_llm)
+        
+        # Call ainvoke with simple message
+        result = await adapter.ainvoke("test prompt")
+        
+        # Verify agenerate was called
+        assert mock_llm.agenerate.called
+        assert result == mock_response
