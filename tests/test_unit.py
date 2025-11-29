@@ -420,3 +420,35 @@ class TestChatOpenAIAdapter:
         # Verify agenerate was called
         assert mock_llm.agenerate.called
         assert result == mock_response
+
+    @pytest.mark.asyncio
+    async def test_adapter_ainvoke_with_message_dict(self):
+        """Test ainvoke with message dict containing role and content.
+        
+        Verifies:
+        - Converts message dicts to BaseMessage instances
+        - Handles {'role': 'user', 'content': 'text'} format
+        """
+        from unittest.mock import AsyncMock, Mock
+        from server.server import ChatOpenAIAdapter, HumanMessage
+        
+        mock_llm = Mock()
+        mock_response = {"result": "success"}
+        mock_llm.agenerate = AsyncMock(return_value=mock_response)
+        
+        adapter = ChatOpenAIAdapter(mock_llm)
+        
+        # Call with message dict
+        message_dict = {"role": "user", "content": "test message"}
+        result = await adapter.ainvoke([message_dict])
+        
+        # Verify the call happened
+        assert mock_llm.agenerate.called
+        # Check that args were converted to BaseMessage
+        call_args = mock_llm.agenerate.call_args
+        assert len(call_args[0]) > 0
+        # First arg should be list of HumanMessage
+        first_arg = call_args[0][0]
+        assert isinstance(first_arg, list)
+        assert len(first_arg) == 1
+        assert isinstance(first_arg[0], HumanMessage)
