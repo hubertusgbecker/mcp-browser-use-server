@@ -332,3 +332,166 @@ class TestRunCommand:
             
             # Should complete successfully
             assert result.exit_code == 0
+
+
+@pytest.mark.skipif(CliRunner is None, reason="click not installed")
+class TestLLMProviderInitialization:
+    """Test LLM provider initialization and fallback logic."""
+
+    def test_buchatopenai_is_used_when_available(self, monkeypatch):
+        """Test that BUChatOpenAI is preferred when available (lines 244-268)."""
+        # Set API key
+        monkeypatch.setenv("OPENAI_API_KEY", "test-key-123")
+        
+        llm_created = {"used_provider": None, "model": None}
+        
+        # Mock BUChatOpenAI to track usage
+        class MockBUChatOpenAI:
+            def __init__(self, model, api_key, temperature, add_schema_to_system_prompt):
+                llm_created["used_provider"] = "BUChatOpenAI"
+                llm_created["model"] = model
+                self.model = model
+        
+        async def fake_run(task_id, instruction, llm, config):
+            # Verify LLM was created
+            if llm_created["used_provider"] != "BUChatOpenAI":
+                raise AssertionError(f"Expected BUChatOpenAI, got {llm_created['used_provider']}")
+            return None
+        
+        with monkeypatch.context() as m:
+            # Patch the BUChatOpenAI in cli module
+            m.setattr(cli_mod, "BUChatOpenAI", MockBUChatOpenAI)
+            m.setattr("server.server.run_browser_task_async", fake_run)
+            
+            runner = CliRunner()
+            result = runner.invoke(
+                cli_mod.cli,
+                ["run-browser-agent", "Test task"],
+            )
+            
+            # Should complete successfully
+            assert result.exit_code == 0
+            assert llm_created["used_provider"] == "BUChatOpenAI"
+
+    def test_buchatopenai_exception_falls_back_to_none(self, monkeypatch):
+        """Test that BUChatOpenAI exception is handled gracefully (lines 268-270)."""
+        monkeypatch.setenv("OPENAI_API_KEY", "test-key-123")
+        
+        # Mock BUChatOpenAI to raise exception
+        def mock_buchat_raises(*args, **kwargs):
+            raise RuntimeError("Simulated BUChatOpenAI failure")
+        
+        async def fake_run(task_id, instruction, llm, config):
+            # LLM should be None after exception
+            if llm is not None:
+                raise AssertionError(f"Expected llm=None after exception, got {llm}")
+            return None
+        
+        with monkeypatch.context() as m:
+            m.setattr(cli_mod, "BUChatOpenAI", mock_buchat_raises)
+            m.setattr(cli_mod, "LCChatOpenAI", None)  # Ensure no fallback
+            m.setattr("server.server.run_browser_task_async", fake_run)
+            
+            runner = CliRunner()
+            result = runner.invoke(
+                cli_mod.cli,
+                ["run-browser-agent", "Test task"],
+            )
+            
+            # Should complete successfully even with LLM=None
+            assert result.exit_code == 0
+
+    def test_lcchatopenai_fallback_when_buchat_is_none(self, monkeypatch):
+        """Test fallback to LCChatOpenAI when BUChatOpenAI is None (lines 271-284)."""
+        monkeypatch.setenv("OPENAI_API_KEY", "test-key-123")
+        
+        llm_created = {"used_provider": None}
+        
+        # Mock LCChatOpenAI
+        class MockLCChatOpenAI:
+            def __init__(self, model, api_key, temperature):
+                llm_created["used_provider"] = "LCChatOpenAI"
+                self.model = model
+        
+        async def fake_run(task_id, instruction, llm, config):
+            if llm_created["used_provider"] != "LCChatOpenAI":
+                raise AssertionError(f"Expected LCChatOpenAI fallback, got {llm_created['used_provider']}")
+            return None
+        
+        with monkeypatch.context() as m:
+            m.setattr(cli_mod, "BUChatOpenAI", None)  # Force fallback
+            m.setattr(cli_mod, "LCChatOpenAI", MockLCChatOpenAI)
+            m.setattr("server.server.run_browser_task_async", fake_run)
+            
+            runner = CliRunner()
+            result = runner.invoke(
+                cli_mod.cli,
+                ["run-browser-agent", "Test task"],
+            )
+            
+            assert result.exit_code == 0
+            assert llm_created["used_provider"] == "LCChatOpenAI"
+
+    def test_lcchatopenai_model_attribute_setting(self, monkeypatch):
+        """Test setattr for llm.model when attribute missing (lines 298-300)."""
+        monkeypatch.setenv("OPENAI_API_KEY", "test-key-123")
+        
+        setattr_called = {"called": False}
+        
+        # Mock LCChatOpenAI without model attribute
+        class MockLCChatOpenAINoModel:
+            def __init__(self, model, api_key, temperature):
+                # Intentionally don't set self.model
+                pass
+            
+            def __setattr__(self, name, value):
+                if name == "model":
+                    setattr_called["called"] = True
+                super().__setattr__(name, value)
+        
+        async def fake_run(task_id, instruction, llm, config):
+            return None
+        
+        with monkeypatch.context() as m:
+            m.setattr(cli_mod, "BUChatOpenAI", None)
+            m.setattr(cli_mod, "LCChatOpenAI", MockLCChatOpenAINoModel)
+            m.setattr("server.server.run_browser_task_async", fake_run)
+            
+            runner = CliRunner()
+            result = runner.invoke(
+                cli_mod.cli,
+                ["run-browser-agent", "Test task"],
+            )
+            
+            assert result.exit_code == 0
+            assert setattr_called["called"]
+
+    def test_lcchatopenai_setattr_exception_handled(self, monkeypatch):
+        """Test exception in setattr is handled gracefully (lines 300)."""
+        monkeypatch.setenv("OPENAI_API_KEY", "test-key-123")
+        
+        # Mock LCChatOpenAI that raises on setattr
+        class MockLCChatOpenAIBadSetattr:
+            def __init__(self, model, api_key, temperature):
+                pass
+            
+            def __setattr__(self, name, value):
+                raise RuntimeError("Simulated setattr failure")
+        
+        async def fake_run(task_id, instruction, llm, config):
+            # Should still work even if setattr failed
+            return None
+        
+        with monkeypatch.context() as m:
+            m.setattr(cli_mod, "BUChatOpenAI", None)
+            m.setattr(cli_mod, "LCChatOpenAI", MockLCChatOpenAIBadSetattr)
+            m.setattr("server.server.run_browser_task_async", fake_run)
+            
+            runner = CliRunner()
+            result = runner.invoke(
+                cli_mod.cli,
+                ["run-browser-agent", "Test task"],
+            )
+            
+            # Should complete despite setattr exception
+            assert result.exit_code == 0
