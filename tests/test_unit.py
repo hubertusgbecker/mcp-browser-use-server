@@ -452,3 +452,49 @@ class TestChatOpenAIAdapter:
         assert isinstance(first_arg, list)
         assert len(first_arg) == 1
         assert isinstance(first_arg[0], HumanMessage)
+
+    @pytest.mark.asyncio
+    async def test_adapter_ainvoke_with_system_message(self):
+        """Test ainvoke converts system role messages correctly.
+        
+        Verifies:
+        - System role messages become SystemMessage instances
+        """
+        from unittest.mock import AsyncMock, Mock
+        from server.server import ChatOpenAIAdapter, SystemMessage
+        
+        mock_llm = Mock()
+        mock_llm.agenerate = AsyncMock(return_value={"success": True})
+        adapter = ChatOpenAIAdapter(mock_llm)
+        
+        # Call with system message
+        result = await adapter.ainvoke([{"role": "system", "content": "You are helpful"}])
+        
+        # Verify SystemMessage was created
+        call_args = mock_llm.agenerate.call_args[0][0]
+        assert len(call_args) == 1
+        assert isinstance(call_args[0], SystemMessage)
+
+    @pytest.mark.asyncio
+    async def test_adapter_ainvoke_with_assistant_message(self):
+        """Test ainvoke converts assistant role messages correctly.
+        
+        Verifies:
+        - Assistant/AI role messages become AIMessage instances
+        """
+        from unittest.mock import AsyncMock, Mock
+        from server.server import ChatOpenAIAdapter, AIMessage
+        
+        mock_llm = Mock()
+        mock_llm.agenerate = AsyncMock(return_value={"success": True})
+        adapter = ChatOpenAIAdapter(mock_llm)
+        
+        # Test with assistant role
+        result = await adapter.ainvoke([{"role": "assistant", "content": "I can help"}])
+        call_args = mock_llm.agenerate.call_args[0][0]
+        assert isinstance(call_args[0], AIMessage)
+        
+        # Test with ai role
+        await adapter.ainvoke([{"role": "ai", "content": "AI response"}])
+        call_args = mock_llm.agenerate.call_args[0][0]
+        assert isinstance(call_args[0], AIMessage)
