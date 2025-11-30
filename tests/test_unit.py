@@ -589,3 +589,112 @@ class TestChatOpenAIAdapter:
 
         # Verify agenerate was called
         assert mock_llm.agenerate.called
+
+    @pytest.mark.asyncio
+    async def test_adapter_ainvoke_error_handling_with_logging_success(self):
+        """Test ainvoke logs error details when agenerate fails.
+
+        Verifies:
+        - Exception from agenerate is caught and logged
+        - Error details are logged with arg types
+        - Original exception is re-raised
+        """
+        from unittest.mock import AsyncMock, Mock
+        from server.server import ChatOpenAIAdapter
+
+        mock_llm = Mock()
+        test_error = RuntimeError("Test LLM failure")
+        mock_llm.agenerate = AsyncMock(side_effect=test_error)
+
+        adapter = ChatOpenAIAdapter(mock_llm)
+
+        # Should raise the original error
+        with pytest.raises(RuntimeError, match="Test LLM failure"):
+            await adapter.ainvoke("test prompt")
+
+    @pytest.mark.asyncio
+    async def test_adapter_ainvoke_sync_agenerate_fallback(self):
+        """Test ainvoke falls back to sync agenerate via executor.
+
+        Verifies:
+        - Non-coroutine agenerate is called via run_in_executor
+        - Result is returned correctly
+        """
+        from unittest.mock import Mock
+        from server.server import ChatOpenAIAdapter
+
+        mock_llm = Mock()
+        mock_response = {"sync_result": True}
+        # Make agenerate a regular function (not async)
+        mock_llm.agenerate = Mock(return_value=mock_response)
+
+        adapter = ChatOpenAIAdapter(mock_llm)
+
+        result = await adapter.ainvoke("test prompt")
+
+        assert mock_llm.agenerate.called
+        assert result == mock_response
+
+    @pytest.mark.asyncio
+    async def test_adapter_ainvoke_fallback_to_generate(self):
+        """Test ainvoke falls back to generate method when agenerate missing.
+
+        Verifies:
+        - Falls back to generate when agenerate not available
+        - Uses run_in_executor for sync generate
+        """
+        from unittest.mock import Mock
+        from server.server import ChatOpenAIAdapter
+
+        mock_llm = Mock()
+        mock_response = {"generate_result": True}
+        # Remove agenerate, only provide generate
+        del mock_llm.agenerate
+        mock_llm.generate = Mock(return_value=mock_response)
+
+        adapter = ChatOpenAIAdapter(mock_llm)
+
+        result = await adapter.ainvoke("test prompt")
+
+        assert mock_llm.generate.called
+        assert result == mock_response
+
+    @pytest.mark.asyncio
+    async def test_adapter_ainvoke_no_async_support_raises(self):
+        """Test ainvoke raises NotImplementedError when no async support.
+
+        Verifies:
+        - NotImplementedError when neither agenerate nor generate exist
+        """
+        from unittest.mock import Mock
+        from server.server import ChatOpenAIAdapter
+
+        mock_llm = Mock()
+        # Remove both agenerate and generate
+        del mock_llm.agenerate
+        del mock_llm.generate
+
+        adapter = ChatOpenAIAdapter(mock_llm)
+
+        with pytest.raises(NotImplementedError, match="does not support async invocation"):
+            await adapter.ainvoke("test prompt")
+
+    @pytest.mark.asyncio
+    async def test_adapter_agenerate_delegates_to_ainvoke(self):
+        """Test agenerate method delegates to ainvoke.
+
+        Verifies:
+        - agenerate is an alias for ainvoke
+        """
+        from unittest.mock import AsyncMock, Mock
+        from server.server import ChatOpenAIAdapter
+
+        mock_llm = Mock()
+        mock_response = {"result": "from_agenerate"}
+        mock_llm.agenerate = AsyncMock(return_value=mock_response)
+
+        adapter = ChatOpenAIAdapter(mock_llm)
+
+        result = await adapter.agenerate("test prompt")
+
+        assert result == mock_response
