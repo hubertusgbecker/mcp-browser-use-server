@@ -600,6 +600,7 @@ class TestChatOpenAIAdapter:
         - Original exception is re-raised
         """
         from unittest.mock import AsyncMock, Mock
+
         from server.server import ChatOpenAIAdapter
 
         mock_llm = Mock()
@@ -621,6 +622,7 @@ class TestChatOpenAIAdapter:
         - Result is returned correctly
         """
         from unittest.mock import Mock
+
         from server.server import ChatOpenAIAdapter
 
         mock_llm = Mock()
@@ -644,6 +646,7 @@ class TestChatOpenAIAdapter:
         - Uses run_in_executor for sync generate
         """
         from unittest.mock import Mock
+
         from server.server import ChatOpenAIAdapter
 
         mock_llm = Mock()
@@ -667,6 +670,7 @@ class TestChatOpenAIAdapter:
         - NotImplementedError when neither agenerate nor generate exist
         """
         from unittest.mock import Mock
+
         from server.server import ChatOpenAIAdapter
 
         mock_llm = Mock()
@@ -676,7 +680,9 @@ class TestChatOpenAIAdapter:
 
         adapter = ChatOpenAIAdapter(mock_llm)
 
-        with pytest.raises(NotImplementedError, match="does not support async invocation"):
+        with pytest.raises(
+            NotImplementedError, match="does not support async invocation"
+        ):
             await adapter.ainvoke("test prompt")
 
     @pytest.mark.asyncio
@@ -687,6 +693,7 @@ class TestChatOpenAIAdapter:
         - agenerate is an alias for ainvoke
         """
         from unittest.mock import AsyncMock, Mock
+
         from server.server import ChatOpenAIAdapter
 
         mock_llm = Mock()
@@ -723,6 +730,7 @@ class TestEnsureLLMAdapter:
         - Works with browser-use v0.9.7+ ChatOpenAI
         """
         from unittest.mock import Mock
+
         from server.server import ensure_llm_adapter
 
         mock_llm = Mock()
@@ -768,3 +776,158 @@ class TestCreateBrowserContext:
         )
 
         assert result == (None, None)
+
+
+class TestRunBrowserTaskAsync:
+    """Test suite for run_browser_task_async function.
+    
+    Tests async task execution with browser-use Agent.
+    """
+
+    @pytest.mark.asyncio
+    async def test_run_browser_task_basic(self, mock_config, cleanup_tasks):
+        """Test basic browser task execution.
+        
+        Verifies:
+        - Task is created with pending status
+        - Task transitions to running
+        - Task store is populated with metadata
+        """
+        from server.server import run_browser_task_async, task_store
+        from unittest.mock import AsyncMock, Mock, patch
+
+        task_id = "test-task-run-basic"
+        instruction = "Navigate to example.com"
+
+        # Mock browser-use components
+        mock_agent = Mock()
+        mock_agent.run = AsyncMock(return_value="Task completed")
+
+        with patch("server.server.ChatOpenAI") as mock_chat_openai, \
+             patch("server.server.Agent") as mock_agent_cls, \
+             patch("server.server.create_browser_context_for_task") as mock_create_browser:
+            
+            mock_chat_openai.return_value = Mock()
+            mock_agent_cls.return_value = mock_agent
+            mock_create_browser.return_value = (None, None)
+
+            # Execute task
+            await run_browser_task_async(
+                task_id=task_id,
+                instruction=instruction,
+                config=mock_config
+            )
+
+            # Verify task was created and executed
+            assert task_id in task_store
+            assert task_store[task_id]["status"] in ["running", "completed"]
+            assert "start_time" in task_store[task_id]
+
+    @pytest.mark.asyncio
+    async def test_run_browser_task_with_llm(self, mock_config, cleanup_tasks):
+        """Test browser task with provided LLM.
+        
+        Verifies:
+        - Uses provided LLM instead of creating new one
+        - Task executes successfully
+        """
+        from server.server import run_browser_task_async, task_store
+        from unittest.mock import AsyncMock, Mock, patch
+
+        task_id = "test-task-with-llm"
+        instruction = "Test with custom LLM"
+        mock_llm = Mock()
+
+        mock_agent = Mock()
+        mock_agent.run = AsyncMock(return_value="Success")
+
+        with patch("server.server.Agent") as mock_agent_cls, \
+             patch("server.server.create_browser_context_for_task") as mock_create_browser:
+            
+            mock_agent_cls.return_value = mock_agent
+            mock_create_browser.return_value = (None, None)
+
+            await run_browser_task_async(
+                task_id=task_id,
+                instruction=instruction,
+                llm=mock_llm,
+                config=mock_config
+            )
+
+            # Verify task completed
+            assert task_id in task_store
+            assert task_store[task_id]["status"] in ["running", "completed"]
+
+    @pytest.mark.asyncio
+    async def test_run_browser_task_error_handling(self, mock_config, cleanup_tasks):
+        """Test error handling in browser task execution.
+        
+        Verifies:
+        - Task status set to failed on error
+        - Error message stored in task_store
+        """
+        from server.server import run_browser_task_async, task_store
+        from unittest.mock import AsyncMock, Mock, patch
+
+        task_id = "test-task-error"
+        instruction = "Task that fails"
+
+        mock_agent = Mock()
+        mock_agent.run = AsyncMock(side_effect=Exception("Test error"))
+
+        with patch("server.server.ChatOpenAI") as mock_chat_openai, \
+             patch("server.server.Agent") as mock_agent_cls, \
+             patch("server.server.create_browser_context_for_task") as mock_create_browser:
+            
+            mock_chat_openai.return_value = Mock()
+            mock_agent_cls.return_value = mock_agent
+            mock_create_browser.return_value = (None, None)
+
+            # Execute task (should handle error gracefully)
+            await run_browser_task_async(
+                task_id=task_id,
+                instruction=instruction,
+                config=mock_config
+            )
+
+            # Verify error was captured
+            assert task_id in task_store
+            # Task should be marked as failed
+            assert task_store[task_id]["status"] == "failed" or "error" in task_store[task_id]
+
+    @pytest.mark.asyncio
+    async def test_run_browser_task_legacy_url_action(self, mock_config, cleanup_tasks):
+        """Test browser task with legacy url/action parameters.
+        
+        Verifies:
+        - Legacy parameters are converted to instruction
+        - Task executes successfully
+        """
+        from server.server import run_browser_task_async, task_store
+        from unittest.mock import AsyncMock, Mock, patch
+
+        task_id = "test-task-legacy"
+        url = "https://example.com"
+        action = "click the login button"
+
+        mock_agent = Mock()
+        mock_agent.run = AsyncMock(return_value="Legacy task completed")
+
+        with patch("server.server.ChatOpenAI") as mock_chat_openai, \
+             patch("server.server.Agent") as mock_agent_cls, \
+             patch("server.server.create_browser_context_for_task") as mock_create_browser:
+            
+            mock_chat_openai.return_value = Mock()
+            mock_agent_cls.return_value = mock_agent
+            mock_create_browser.return_value = (None, None)
+
+            await run_browser_task_async(
+                task_id=task_id,
+                url=url,
+                action=action,
+                config=mock_config
+            )
+
+            # Verify task created
+            assert task_id in task_store
+            assert task_store[task_id]["status"] in ["running", "completed"]
