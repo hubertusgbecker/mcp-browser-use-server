@@ -731,3 +731,40 @@ class TestEnsureLLMAdapter:
         result = ensure_llm_adapter(mock_llm)
 
         assert result is mock_llm
+
+
+class TestCreateBrowserContext:
+    """Test create_browser_context_for_task function."""
+
+    @pytest.mark.asyncio
+    async def test_create_browser_context_returns_none_tuple(self):
+        """Test create_browser_context_for_task returns (None, None).
+
+        Verifies:
+        - Returns (None, None) for API compatibility
+        - browser-use v0.9.5+ handles context internally
+        """
+        from server.server import create_browser_context_for_task
+
+        result = await create_browser_context_for_task()
+
+        assert result == (None, None)
+
+    @pytest.mark.asyncio
+    async def test_create_browser_context_with_custom_params(self):
+        """Test create_browser_context_for_task accepts custom parameters.
+
+        Verifies:
+        - Accepts custom chrome_path, dimensions, locale
+        - Still returns (None, None) regardless of parameters
+        """
+        from server.server import create_browser_context_for_task
+
+        result = await create_browser_context_for_task(
+            chrome_path="/custom/chrome",
+            window_width=1920,
+            window_height=1080,
+            locale="en-US",
+        )
+
+        assert result == (None, None)
