@@ -167,21 +167,28 @@ class TestEnvFileOption:
         """Test that --env-file loads custom environment file."""
         # Create a custom .env file with unique value
         custom_env = tmp_path / "custom.env"
-        custom_env.write_text("OPENAI_API_KEY=test-key\nCUSTOM_VAR=custom_value\n")
-        
+        custom_env.write_text(
+            "OPENAI_API_KEY=test-key\nCUSTOM_VAR=custom_value\n"
+        )
+
         async def fake_run(task_id, instruction, llm, config):
             # Just verify the task was called
             return None
-        
+
         with monkeypatch.context() as m:
             m.setattr("server.server.run_browser_task_async", fake_run)
-            
+
             runner = CliRunner()
             result = runner.invoke(
                 cli_mod.cli,
-                ["run-browser-agent", "--env-file", str(custom_env), "Test task"],
+                [
+                    "run-browser-agent",
+                    "--env-file",
+                    str(custom_env),
+                    "Test task",
+                ],
             )
-            
+
             # Should complete successfully (line 202 executed)
             assert result.exit_code == 0
 
@@ -194,10 +201,10 @@ class TestLogError:
         """Test that log_error outputs JSON-formatted error to stderr."""
         cli_mod.log_error("Test error message")
         captured = capsys.readouterr()
-        
+
         # Should output to stderr
         assert captured.err.strip() != ""
-        
+
         # Should be valid JSON
         error_data = json.loads(captured.err.strip())
         assert "error" in error_data
@@ -209,7 +216,7 @@ class TestLogError:
         test_exception = ValueError("Something went wrong")
         cli_mod.log_error("Test error with exception", test_exception)
         captured = capsys.readouterr()
-        
+
         # Should be valid JSON
         error_data = json.loads(captured.err.strip())
         assert "error" in error_data
@@ -226,79 +233,91 @@ class TestRunCommand:
         """Test that run command exits with error for invalid subcommand."""
         runner = CliRunner()
         result = runner.invoke(cli_mod.cli, ["run", "invalid-subcommand"])
-        
+
         # Should exit with error code
         assert result.exit_code == 1
-        
+
         # Error should be logged to stderr in JSON format
         captured = capsys.readouterr()
-        assert "invalid-subcommand" in result.output or "invalid-subcommand" in captured.err
+        assert (
+            "invalid-subcommand" in result.output
+            or "invalid-subcommand" in captured.err
+        )
 
     def test_run_command_with_all_options(self, monkeypatch):
         """Test run command accepts all CLI options without error."""
+
         def fake_server_main():
             return None
-        
+
         # Patch server main to avoid actually starting the server
         with monkeypatch.context() as m:
             m.setattr("sys.argv", ["server"])  # Reset argv
             # Patch at the module where _import_server returns it
             original_import = cli_mod._import_server
-            
+
             def mock_import():
                 init_conf, run_task, _ = original_import()
                 return init_conf, run_task, fake_server_main
-            
+
             m.setattr(cli_mod, "_import_server", mock_import)
-            
+
             runner = CliRunner()
             result = runner.invoke(
                 cli_mod.cli,
                 [
                     "run",
                     "server",
-                    "--port", "9000",
-                    "--proxy-port", "9001",
-                    "--chrome-path", "/path/to/chrome",
-                    "--window-width", "1920",
-                    "--window-height", "1080",
-                    "--locale", "de-DE",
-                    "--task-expiry-minutes", "30",
+                    "--port",
+                    "9000",
+                    "--proxy-port",
+                    "9001",
+                    "--chrome-path",
+                    "/path/to/chrome",
+                    "--window-width",
+                    "1920",
+                    "--window-height",
+                    "1080",
+                    "--locale",
+                    "de-DE",
+                    "--task-expiry-minutes",
+                    "30",
                     "--stdio",
-                    "--log-level", "DEBUG",
+                    "--log-level",
+                    "DEBUG",
                 ],
             )
-            
+
             # Should complete without error
             assert result.exit_code == 0
 
     def test_run_command_restores_sys_argv(self, monkeypatch):
         """Test that run command restores sys.argv even on exception."""
         import sys
-        
+
         original_argv = sys.argv.copy()
-        
+
         def fake_server_main():
             raise RuntimeError("Simulated server failure")
-        
+
         with monkeypatch.context() as m:
             original_import = cli_mod._import_server
-            
+
             def mock_import():
                 init_conf, run_task, _ = original_import()
                 return init_conf, run_task, fake_server_main
-            
+
             m.setattr(cli_mod, "_import_server", mock_import)
-            
+
             runner = CliRunner()
             result = runner.invoke(
                 cli_mod.cli,
                 ["run", "server", "--port", "9000"],
             )
-            
+
             # Should exit with error
             assert result.exit_code == 1
-        
+
         # sys.argv should be restored to original
         assert sys.argv == original_argv
 
@@ -306,30 +325,31 @@ class TestRunCommand:
         """Test that run command loads .env file early."""
         # Set an env var that the command should see
         monkeypatch.setenv("LOG_LEVEL", "WARNING")
-        
+
         def fake_server_main():
             # Just return successfully
             return None
-        
+
         with monkeypatch.context() as m:
             original_import = cli_mod._import_server
-            
+
             def mock_import():
                 # Verify dotenv.load_dotenv was called by checking the env
                 import os
+
                 if os.getenv("LOG_LEVEL") != "WARNING":
                     raise AssertionError("ENV not loaded properly")
                 init_conf, run_task, _ = original_import()
                 return init_conf, run_task, fake_server_main
-            
+
             m.setattr(cli_mod, "_import_server", mock_import)
-            
+
             runner = CliRunner()
             result = runner.invoke(
                 cli_mod.cli,
                 ["run", "server"],
             )
-            
+
             # Should complete successfully
             assert result.exit_code == 0
 
@@ -342,33 +362,37 @@ class TestLLMProviderInitialization:
         """Test that BUChatOpenAI is preferred when available (lines 244-268)."""
         # Set API key
         monkeypatch.setenv("OPENAI_API_KEY", "test-key-123")
-        
+
         llm_created = {"used_provider": None, "model": None}
-        
+
         # Mock BUChatOpenAI to track usage
         class MockBUChatOpenAI:
-            def __init__(self, model, api_key, temperature, add_schema_to_system_prompt):
+            def __init__(
+                self, model, api_key, temperature, add_schema_to_system_prompt
+            ):
                 llm_created["used_provider"] = "BUChatOpenAI"
                 llm_created["model"] = model
                 self.model = model
-        
+
         async def fake_run(task_id, instruction, llm, config):
             # Verify LLM was created
             if llm_created["used_provider"] != "BUChatOpenAI":
-                raise AssertionError(f"Expected BUChatOpenAI, got {llm_created['used_provider']}")
+                raise AssertionError(
+                    f"Expected BUChatOpenAI, got {llm_created['used_provider']}"
+                )
             return None
-        
+
         with monkeypatch.context() as m:
             # Patch the BUChatOpenAI in cli module
             m.setattr(cli_mod, "BUChatOpenAI", MockBUChatOpenAI)
             m.setattr("server.server.run_browser_task_async", fake_run)
-            
+
             runner = CliRunner()
             result = runner.invoke(
                 cli_mod.cli,
                 ["run-browser-agent", "Test task"],
             )
-            
+
             # Should complete successfully
             assert result.exit_code == 0
             assert llm_created["used_provider"] == "BUChatOpenAI"
@@ -376,123 +400,127 @@ class TestLLMProviderInitialization:
     def test_buchatopenai_exception_falls_back_to_none(self, monkeypatch):
         """Test that BUChatOpenAI exception is handled gracefully (lines 268-270)."""
         monkeypatch.setenv("OPENAI_API_KEY", "test-key-123")
-        
+
         # Mock BUChatOpenAI to raise exception
         def mock_buchat_raises(*args, **kwargs):
             raise RuntimeError("Simulated BUChatOpenAI failure")
-        
+
         async def fake_run(task_id, instruction, llm, config):
             # LLM should be None after exception
             if llm is not None:
-                raise AssertionError(f"Expected llm=None after exception, got {llm}")
+                raise AssertionError(
+                    f"Expected llm=None after exception, got {llm}"
+                )
             return None
-        
+
         with monkeypatch.context() as m:
             m.setattr(cli_mod, "BUChatOpenAI", mock_buchat_raises)
             m.setattr(cli_mod, "LCChatOpenAI", None)  # Ensure no fallback
             m.setattr("server.server.run_browser_task_async", fake_run)
-            
+
             runner = CliRunner()
             result = runner.invoke(
                 cli_mod.cli,
                 ["run-browser-agent", "Test task"],
             )
-            
+
             # Should complete successfully even with LLM=None
             assert result.exit_code == 0
 
     def test_lcchatopenai_fallback_when_buchat_is_none(self, monkeypatch):
         """Test fallback to LCChatOpenAI when BUChatOpenAI is None (lines 271-284)."""
         monkeypatch.setenv("OPENAI_API_KEY", "test-key-123")
-        
+
         llm_created = {"used_provider": None}
-        
+
         # Mock LCChatOpenAI
         class MockLCChatOpenAI:
             def __init__(self, model, api_key, temperature):
                 llm_created["used_provider"] = "LCChatOpenAI"
                 self.model = model
-        
+
         async def fake_run(task_id, instruction, llm, config):
             if llm_created["used_provider"] != "LCChatOpenAI":
-                raise AssertionError(f"Expected LCChatOpenAI fallback, got {llm_created['used_provider']}")
+                raise AssertionError(
+                    f"Expected LCChatOpenAI fallback, got {llm_created['used_provider']}"
+                )
             return None
-        
+
         with monkeypatch.context() as m:
             m.setattr(cli_mod, "BUChatOpenAI", None)  # Force fallback
             m.setattr(cli_mod, "LCChatOpenAI", MockLCChatOpenAI)
             m.setattr("server.server.run_browser_task_async", fake_run)
-            
+
             runner = CliRunner()
             result = runner.invoke(
                 cli_mod.cli,
                 ["run-browser-agent", "Test task"],
             )
-            
+
             assert result.exit_code == 0
             assert llm_created["used_provider"] == "LCChatOpenAI"
 
     def test_lcchatopenai_model_attribute_setting(self, monkeypatch):
         """Test setattr for llm.model when attribute missing (lines 298-300)."""
         monkeypatch.setenv("OPENAI_API_KEY", "test-key-123")
-        
+
         setattr_called = {"called": False}
-        
+
         # Mock LCChatOpenAI without model attribute
         class MockLCChatOpenAINoModel:
             def __init__(self, model, api_key, temperature):
                 # Intentionally don't set self.model
                 pass
-            
+
             def __setattr__(self, name, value):
                 if name == "model":
                     setattr_called["called"] = True
                 super().__setattr__(name, value)
-        
+
         async def fake_run(task_id, instruction, llm, config):
             return None
-        
+
         with monkeypatch.context() as m:
             m.setattr(cli_mod, "BUChatOpenAI", None)
             m.setattr(cli_mod, "LCChatOpenAI", MockLCChatOpenAINoModel)
             m.setattr("server.server.run_browser_task_async", fake_run)
-            
+
             runner = CliRunner()
             result = runner.invoke(
                 cli_mod.cli,
                 ["run-browser-agent", "Test task"],
             )
-            
+
             assert result.exit_code == 0
             assert setattr_called["called"]
 
     def test_lcchatopenai_setattr_exception_handled(self, monkeypatch):
         """Test exception in setattr is handled gracefully (lines 300)."""
         monkeypatch.setenv("OPENAI_API_KEY", "test-key-123")
-        
+
         # Mock LCChatOpenAI that raises on setattr
         class MockLCChatOpenAIBadSetattr:
             def __init__(self, model, api_key, temperature):
                 pass
-            
+
             def __setattr__(self, name, value):
                 raise RuntimeError("Simulated setattr failure")
-        
+
         async def fake_run(task_id, instruction, llm, config):
             # Should still work even if setattr failed
             return None
-        
+
         with monkeypatch.context() as m:
             m.setattr(cli_mod, "BUChatOpenAI", None)
             m.setattr(cli_mod, "LCChatOpenAI", MockLCChatOpenAIBadSetattr)
             m.setattr("server.server.run_browser_task_async", fake_run)
-            
+
             runner = CliRunner()
             result = runner.invoke(
                 cli_mod.cli,
                 ["run-browser-agent", "Test task"],
             )
-            
+
             # Should complete despite setattr exception
             assert result.exit_code == 0
 
@@ -505,16 +533,19 @@ class TestMainEntryPoint:
         """Test that module can be run as __main__ (line 304)."""
         import subprocess
         import sys
-        
+
         # Run the module as __main__ with --help to verify it works
         # This exercises the if __name__ == "__main__": cli() line
         result = subprocess.run(
             [sys.executable, "-m", "mcp_browser_use_server.cli", "--help"],
             capture_output=True,
             text=True,
-            timeout=5
+            timeout=5,
         )
-        
+
         # Should exit successfully and show help
         assert result.returncode == 0
-        assert "MCP Browser Use Server" in result.stdout or "Usage:" in result.stdout
+        assert (
+            "MCP Browser Use Server" in result.stdout
+            or "Usage:" in result.stdout
+        )

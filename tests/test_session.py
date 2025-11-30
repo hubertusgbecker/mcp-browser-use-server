@@ -4,9 +4,10 @@ This test suite covers the browser session management functionality.
 Following TDD principles - tests written first.
 """
 
-import pytest
-from unittest.mock import AsyncMock, MagicMock, patch
 from datetime import datetime
+from unittest.mock import AsyncMock, MagicMock, patch
+
+import pytest
 
 from server import session
 
@@ -17,7 +18,7 @@ class TestCreateSession:
     @pytest.mark.asyncio
     async def test_create_session_creates_browser_session(self):
         """Test that create_session creates and starts a BrowserSession.
-        
+
         Verifies:
         - BrowserSession is instantiated with correct profile
         - Session.start() is called
@@ -28,37 +29,37 @@ class TestCreateSession:
         session_id = "test-session-123"
         mock_browser_session = AsyncMock()
         mock_browser_session.start = AsyncMock()
-        
-        with patch("browser_use.BrowserSession") as mock_session_class, \
-             patch("browser_use.browser.BrowserProfile") as mock_profile_class:
-            
+
+        with (
+            patch("browser_use.BrowserSession") as mock_session_class,
+            patch("browser_use.browser.BrowserProfile") as mock_profile_class,
+        ):
             mock_profile = MagicMock()
             mock_profile_class.return_value = mock_profile
             mock_session_class.return_value = mock_browser_session
-            
+
             # Act
             result = await session.create_session(
-                session_id=session_id,
-                headless=True,
-                chrome_path=None
+                session_id=session_id, headless=True, chrome_path=None
             )
-            
+
             # Assert
             assert result == mock_browser_session
             mock_profile_class.assert_called_once_with(
-                headless=True,
-                is_local=True,
-                use_cloud=False
+                headless=True, is_local=True, use_cloud=False
             )
             mock_session_class.assert_called_once_with(
                 browser_profile=mock_profile
             )
             mock_browser_session.start.assert_called_once()
-            
+
             # Verify session is tracked
             assert session_id in session.active_sessions
             assert session.active_sessions[session_id]["id"] == session_id
-            assert session.active_sessions[session_id]["session"] == mock_browser_session
+            assert (
+                session.active_sessions[session_id]["session"]
+                == mock_browser_session
+            )
             assert "created_at" in session.active_sessions[session_id]
             assert "last_activity" in session.active_sessions[session_id]
 
@@ -69,25 +70,24 @@ class TestCreateSession:
         session_id = "test-session-chrome"
         chrome_path = "/custom/path/to/chrome"
         mock_browser_session = AsyncMock()
-        
-        with patch("browser_use.BrowserSession") as mock_session_class, \
-             patch("browser_use.browser.BrowserProfile") as mock_profile_class:
-            
+
+        with (
+            patch("browser_use.BrowserSession") as mock_session_class,
+            patch("browser_use.browser.BrowserProfile") as mock_profile_class,
+        ):
             mock_session_class.return_value = mock_browser_session
-            
+
             # Act
             await session.create_session(
-                session_id=session_id,
-                headless=False,
-                chrome_path=chrome_path
+                session_id=session_id, headless=False, chrome_path=chrome_path
             )
-            
+
             # Assert
             mock_profile_class.assert_called_once_with(
                 headless=False,
                 is_local=True,
                 use_cloud=False,
-                executable_path=chrome_path
+                executable_path=chrome_path,
             )
 
 
@@ -104,12 +104,12 @@ class TestGetSession:
             "id": session_id,
             "session": mock_session,
             "created_at": datetime.now().isoformat(),
-            "last_activity": datetime.now().isoformat()
+            "last_activity": datetime.now().isoformat(),
         }
-        
+
         # Act
         result = await session.get_session(session_id)
-        
+
         # Assert
         assert result == mock_session
         # Verify last_activity was updated
@@ -120,10 +120,10 @@ class TestGetSession:
         """Test that get_session returns None when session doesn't exist."""
         # Arrange
         session_id = "nonexistent-session"
-        
+
         # Act
         result = await session.get_session(session_id)
-        
+
         # Assert
         assert result is None
 
@@ -138,17 +138,17 @@ class TestCloseSession:
         session_id = "session-to-close"
         mock_session = AsyncMock()
         mock_session.stop = AsyncMock()
-        
+
         session.active_sessions[session_id] = {
             "id": session_id,
             "session": mock_session,
             "created_at": datetime.now().isoformat(),
-            "last_activity": datetime.now().isoformat()
+            "last_activity": datetime.now().isoformat(),
         }
-        
+
         # Act
         result = await session.close_session(session_id)
-        
+
         # Assert
         assert result is True
         mock_session.stop.assert_called_once()
@@ -159,10 +159,10 @@ class TestCloseSession:
         """Test that close_session returns False when session doesn't exist."""
         # Arrange
         session_id = "nonexistent-session"
-        
+
         # Act
         result = await session.close_session(session_id)
-        
+
         # Assert
         assert result is False
 
@@ -173,17 +173,17 @@ class TestCloseSession:
         session_id = "error-session"
         mock_session = AsyncMock()
         mock_session.stop = AsyncMock(side_effect=Exception("Stop failed"))
-        
+
         session.active_sessions[session_id] = {
             "id": session_id,
             "session": mock_session,
             "created_at": datetime.now().isoformat(),
-            "last_activity": datetime.now().isoformat()
+            "last_activity": datetime.now().isoformat(),
         }
-        
+
         # Act
         result = await session.close_session(session_id)
-        
+
         # Assert
         assert result is True  # Still returns True and removes from tracking
         assert session_id not in session.active_sessions
@@ -199,31 +199,31 @@ class TestCloseAllSessions:
         mock_session1 = AsyncMock()
         mock_session2 = AsyncMock()
         mock_session3 = AsyncMock()
-        
+
         session.active_sessions = {
             "session1": {
                 "id": "session1",
                 "session": mock_session1,
                 "created_at": datetime.now().isoformat(),
-                "last_activity": datetime.now().isoformat()
+                "last_activity": datetime.now().isoformat(),
             },
             "session2": {
                 "id": "session2",
                 "session": mock_session2,
                 "created_at": datetime.now().isoformat(),
-                "last_activity": datetime.now().isoformat()
+                "last_activity": datetime.now().isoformat(),
             },
             "session3": {
                 "id": "session3",
                 "session": mock_session3,
                 "created_at": datetime.now().isoformat(),
-                "last_activity": datetime.now().isoformat()
-            }
+                "last_activity": datetime.now().isoformat(),
+            },
         }
-        
+
         # Act
         result = await session.close_all_sessions()
-        
+
         # Assert
         assert result == 3
         assert len(session.active_sessions) == 0
@@ -236,10 +236,10 @@ class TestCloseAllSessions:
         """Test that close_all_sessions returns 0 when no sessions exist."""
         # Arrange
         session.active_sessions = {}
-        
+
         # Act
         result = await session.close_all_sessions()
-        
+
         # Assert
         assert result == 0
 
@@ -252,38 +252,46 @@ class TestListSessions:
         # Arrange
         created_time = datetime.now().isoformat()
         activity_time = datetime.now().isoformat()
-        
+
         session.active_sessions = {
             "session1": {
                 "id": "session1",
                 "session": MagicMock(),
                 "created_at": created_time,
-                "last_activity": activity_time
+                "last_activity": activity_time,
             },
             "session2": {
                 "id": "session2",
                 "session": MagicMock(),
                 "created_at": created_time,
-                "last_activity": activity_time
-            }
+                "last_activity": activity_time,
+            },
         }
-        
+
         # Act
         result = session.list_sessions()
-        
+
         # Assert
         assert len(result) == 2
-        assert {"id": "session1", "created_at": created_time, "last_activity": activity_time} in result
-        assert {"id": "session2", "created_at": created_time, "last_activity": activity_time} in result
+        assert {
+            "id": "session1",
+            "created_at": created_time,
+            "last_activity": activity_time,
+        } in result
+        assert {
+            "id": "session2",
+            "created_at": created_time,
+            "last_activity": activity_time,
+        } in result
 
     def test_list_sessions_returns_empty_list_when_no_sessions(self):
         """Test that list_sessions returns empty list when no sessions exist."""
         # Arrange
         session.active_sessions = {}
-        
+
         # Act
         result = session.list_sessions()
-        
+
         # Assert
         assert result == []
 

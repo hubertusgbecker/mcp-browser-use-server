@@ -9,6 +9,7 @@ import pytest
 # Load environment variables for consistent configuration
 try:
     from dotenv import load_dotenv
+
     load_dotenv()
 except ImportError:
     pass

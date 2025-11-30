@@ -100,7 +100,9 @@ def integration_server(request):
                     break
                 time.sleep(0.2)
             else:
-                pytest.skip(f"Failed to start integration server on port {HOST_PORT}")
+                pytest.skip(
+                    f"Failed to start integration server on port {HOST_PORT}"
+                )
 
     yield
 
