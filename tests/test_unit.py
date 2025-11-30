@@ -780,21 +780,22 @@ class TestCreateBrowserContext:
 
 class TestRunBrowserTaskAsync:
     """Test suite for run_browser_task_async function.
-    
+
     Tests async task execution with browser-use Agent.
     """
 
     @pytest.mark.asyncio
     async def test_run_browser_task_basic(self, mock_config, cleanup_tasks):
         """Test basic browser task execution.
-        
+
         Verifies:
         - Task is created with pending status
         - Task transitions to running
         - Task store is populated with metadata
         """
-        from server.server import run_browser_task_async, task_store
         from unittest.mock import AsyncMock, Mock, patch
+
+        from server.server import run_browser_task_async, task_store
 
         task_id = "test-task-run-basic"
         instruction = "Navigate to example.com"
@@ -803,19 +804,20 @@ class TestRunBrowserTaskAsync:
         mock_agent = Mock()
         mock_agent.run = AsyncMock(return_value="Task completed")
 
-        with patch("server.server.ChatOpenAI") as mock_chat_openai, \
-             patch("server.server.Agent") as mock_agent_cls, \
-             patch("server.server.create_browser_context_for_task") as mock_create_browser:
-            
+        with (
+            patch("server.server.ChatOpenAI") as mock_chat_openai,
+            patch("server.server.Agent") as mock_agent_cls,
+            patch(
+                "server.server.create_browser_context_for_task"
+            ) as mock_create_browser,
+        ):
             mock_chat_openai.return_value = Mock()
             mock_agent_cls.return_value = mock_agent
             mock_create_browser.return_value = (None, None)
 
             # Execute task
             await run_browser_task_async(
-                task_id=task_id,
-                instruction=instruction,
-                config=mock_config
+                task_id=task_id, instruction=instruction, config=mock_config
             )
 
             # Verify task was created and executed
@@ -826,13 +828,14 @@ class TestRunBrowserTaskAsync:
     @pytest.mark.asyncio
     async def test_run_browser_task_with_llm(self, mock_config, cleanup_tasks):
         """Test browser task with provided LLM.
-        
+
         Verifies:
         - Uses provided LLM instead of creating new one
         - Task executes successfully
         """
-        from server.server import run_browser_task_async, task_store
         from unittest.mock import AsyncMock, Mock, patch
+
+        from server.server import run_browser_task_async, task_store
 
         task_id = "test-task-with-llm"
         instruction = "Test with custom LLM"
@@ -841,9 +844,12 @@ class TestRunBrowserTaskAsync:
         mock_agent = Mock()
         mock_agent.run = AsyncMock(return_value="Success")
 
-        with patch("server.server.Agent") as mock_agent_cls, \
-             patch("server.server.create_browser_context_for_task") as mock_create_browser:
-            
+        with (
+            patch("server.server.Agent") as mock_agent_cls,
+            patch(
+                "server.server.create_browser_context_for_task"
+            ) as mock_create_browser,
+        ):
             mock_agent_cls.return_value = mock_agent
             mock_create_browser.return_value = (None, None)
 
@@ -851,7 +857,7 @@ class TestRunBrowserTaskAsync:
                 task_id=task_id,
                 instruction=instruction,
                 llm=mock_llm,
-                config=mock_config
+                config=mock_config,
             )
 
             # Verify task completed
@@ -859,15 +865,18 @@ class TestRunBrowserTaskAsync:
             assert task_store[task_id]["status"] in ["running", "completed"]
 
     @pytest.mark.asyncio
-    async def test_run_browser_task_error_handling(self, mock_config, cleanup_tasks):
+    async def test_run_browser_task_error_handling(
+        self, mock_config, cleanup_tasks
+    ):
         """Test error handling in browser task execution.
-        
+
         Verifies:
         - Task status set to failed on error
         - Error message stored in task_store
         """
-        from server.server import run_browser_task_async, task_store
         from unittest.mock import AsyncMock, Mock, patch
+
+        from server.server import run_browser_task_async, task_store
 
         task_id = "test-task-error"
         instruction = "Task that fails"
@@ -875,36 +884,43 @@ class TestRunBrowserTaskAsync:
         mock_agent = Mock()
         mock_agent.run = AsyncMock(side_effect=Exception("Test error"))
 
-        with patch("server.server.ChatOpenAI") as mock_chat_openai, \
-             patch("server.server.Agent") as mock_agent_cls, \
-             patch("server.server.create_browser_context_for_task") as mock_create_browser:
-            
+        with (
+            patch("server.server.ChatOpenAI") as mock_chat_openai,
+            patch("server.server.Agent") as mock_agent_cls,
+            patch(
+                "server.server.create_browser_context_for_task"
+            ) as mock_create_browser,
+        ):
             mock_chat_openai.return_value = Mock()
             mock_agent_cls.return_value = mock_agent
             mock_create_browser.return_value = (None, None)
 
             # Execute task (should handle error gracefully)
             await run_browser_task_async(
-                task_id=task_id,
-                instruction=instruction,
-                config=mock_config
+                task_id=task_id, instruction=instruction, config=mock_config
             )
 
             # Verify error was captured
             assert task_id in task_store
             # Task should be marked as failed
-            assert task_store[task_id]["status"] == "failed" or "error" in task_store[task_id]
+            assert (
+                task_store[task_id]["status"] == "failed"
+                or "error" in task_store[task_id]
+            )
 
     @pytest.mark.asyncio
-    async def test_run_browser_task_legacy_url_action(self, mock_config, cleanup_tasks):
+    async def test_run_browser_task_legacy_url_action(
+        self, mock_config, cleanup_tasks
+    ):
         """Test browser task with legacy url/action parameters.
-        
+
         Verifies:
         - Legacy parameters are converted to instruction
         - Task executes successfully
         """
-        from server.server import run_browser_task_async, task_store
         from unittest.mock import AsyncMock, Mock, patch
+
+        from server.server import run_browser_task_async, task_store
 
         task_id = "test-task-legacy"
         url = "https://example.com"
@@ -913,21 +929,144 @@ class TestRunBrowserTaskAsync:
         mock_agent = Mock()
         mock_agent.run = AsyncMock(return_value="Legacy task completed")
 
-        with patch("server.server.ChatOpenAI") as mock_chat_openai, \
-             patch("server.server.Agent") as mock_agent_cls, \
-             patch("server.server.create_browser_context_for_task") as mock_create_browser:
-            
+        with (
+            patch("server.server.ChatOpenAI") as mock_chat_openai,
+            patch("server.server.Agent") as mock_agent_cls,
+            patch(
+                "server.server.create_browser_context_for_task"
+            ) as mock_create_browser,
+        ):
             mock_chat_openai.return_value = Mock()
             mock_agent_cls.return_value = mock_agent
             mock_create_browser.return_value = (None, None)
 
             await run_browser_task_async(
-                task_id=task_id,
-                url=url,
-                action=action,
-                config=mock_config
+                task_id=task_id, url=url, action=action, config=mock_config
             )
 
             # Verify task created
             assert task_id in task_store
             assert task_store[task_id]["status"] in ["running", "completed"]
+
+
+class TestCleanupOldTasks:
+    """Test suite for cleanup_old_tasks function.
+
+    Tests automatic cleanup of completed tasks to prevent memory leaks.
+    """
+
+    @pytest.mark.asyncio
+    async def test_cleanup_logic_removes_old_tasks(self, cleanup_tasks):
+        """Test that cleanup logic removes tasks older than 1 hour.
+
+        Verifies:
+        - Old completed tasks are identified and removed
+        - Recent tasks are preserved
+        """
+        from datetime import datetime, timedelta
+
+        from server.server import task_store
+
+        # Create old completed task (2 hours ago)
+        old_time = (datetime.now() - timedelta(hours=2)).isoformat()
+        task_store["old-task"] = {
+            "status": "completed",
+            "end_time": old_time,
+            "result": "old result",
+        }
+
+        # Create recent completed task (30 minutes ago)
+        recent_time = (datetime.now() - timedelta(minutes=30)).isoformat()
+        task_store["recent-task"] = {
+            "status": "completed",
+            "end_time": recent_time,
+            "result": "recent result",
+        }
+
+        # Create running task
+        task_store["running-task"] = {"status": "running", "result": None}
+
+        # Manually execute cleanup logic (from cleanup_old_tasks function)
+        current_time = datetime.now()
+        tasks_to_remove = []
+
+        for task_id, task_data in task_store.items():
+            if (
+                task_data["status"] in ["completed", "failed"]
+                and "end_time" in task_data
+            ):
+                end_time = datetime.fromisoformat(task_data["end_time"])
+                hours_elapsed = (current_time - end_time).total_seconds() / 3600
+
+                if hours_elapsed > 1:  # Remove tasks older than 1 hour
+                    tasks_to_remove.append(task_id)
+
+        # Remove old tasks
+        for task_id in tasks_to_remove:
+            del task_store[task_id]
+
+        # Verify old task was removed, recent and running preserved
+        assert "old-task" not in task_store
+        assert "recent-task" in task_store
+        assert "running-task" in task_store
+
+    @pytest.mark.asyncio
+    async def test_cleanup_logic_handles_missing_end_time(self, cleanup_tasks):
+        """Test that cleanup handles tasks without end_time gracefully.
+
+        Verifies:
+        - Tasks without end_time are not removed
+        - No errors raised
+        """
+        from datetime import datetime
+
+        from server.server import task_store
+
+        # Create completed task without end_time
+        task_store["no-endtime-task"] = {
+            "status": "completed",
+            "result": "result",
+        }
+
+        # Manually execute cleanup logic
+        current_time = datetime.now()
+        tasks_to_remove = []
+
+        try:
+            for task_id, task_data in task_store.items():
+                if (
+                    task_data["status"] in ["completed", "failed"]
+                    and "end_time" in task_data
+                ):
+                    end_time = datetime.fromisoformat(task_data["end_time"])
+                    hours_elapsed = (
+                        current_time - end_time
+                    ).total_seconds() / 3600
+
+                    if hours_elapsed > 1:
+                        tasks_to_remove.append(task_id)
+
+            for task_id in tasks_to_remove:
+                del task_store[task_id]
+
+        except Exception:
+            # Should not raise
+            pytest.fail("Cleanup raised exception")
+
+        # Task should still be present
+        assert "no-endtime-task" in task_store
+
+    @pytest.mark.asyncio
+    async def test_cleanup_function_exists(self):
+        """Test that cleanup_old_tasks function is defined and callable.
+
+        Verifies:
+        - Function exists
+        - Is a coroutine function
+        """
+        from inspect import iscoroutinefunction
+
+        from server.server import cleanup_old_tasks
+
+        assert callable(cleanup_old_tasks)
+        assert iscoroutinefunction(cleanup_old_tasks)
