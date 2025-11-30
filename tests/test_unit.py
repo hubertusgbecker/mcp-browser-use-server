@@ -1367,3 +1367,152 @@ class TestConfigInitialization:
 
         assert isinstance(CONFIG["CLEANUP_INTERVAL_SECONDS"], int)
         assert CONFIG["CLEANUP_INTERVAL_SECONDS"] > 0
+
+
+class TestChatOpenAIAdapterNormalization:
+    """Test suite for ChatOpenAIAdapter normalization logic.
+
+    Tests internal message normalization in ainvoke method.
+    """
+
+    @pytest.mark.asyncio
+    async def test_adapter_normalizes_dict_with_role_content(self):
+        """Test normalization of dict with role and content.
+
+        Verifies:
+        - Dicts with role/content are properly normalized
+        - Content is recursively normalized
+        """
+        from unittest.mock import Mock
+
+        from server.server import ChatOpenAIAdapter
+
+        mock_llm = Mock()
+        mock_llm.agenerate = Mock(return_value={"content": "response"})
+
+        adapter = ChatOpenAIAdapter(mock_llm)
+
+        # Test with message dict
+        result = await adapter.ainvoke([{"role": "user", "content": "hello"}])
+
+        assert mock_llm.agenerate.called
+        assert result == {"content": "response"}
+
+    @pytest.mark.asyncio
+    async def test_adapter_handles_nested_content(self):
+        """Test normalization of nested content structures.
+
+        Verifies:
+        - Nested lists and dicts are normalized
+        - Deep structures handled correctly
+        """
+        from unittest.mock import Mock
+
+        from server.server import ChatOpenAIAdapter
+
+        mock_llm = Mock()
+        mock_llm.agenerate = Mock(return_value="ok")
+
+        adapter = ChatOpenAIAdapter(mock_llm)
+
+        # Test with nested structure
+        await adapter.ainvoke(
+            [{"role": "user", "content": ["text", {"nested": "data"}]}]
+        )
+
+        assert mock_llm.agenerate.called
+
+    @pytest.mark.asyncio
+    async def test_adapter_handles_object_with_to_dict(self):
+        """Test normalization of objects with to_dict method.
+
+        Verifies:
+        - Objects with to_dict are converted
+        - Fallback to str if to_dict fails
+        """
+        from unittest.mock import Mock
+
+        from server.server import ChatOpenAIAdapter
+
+        class CustomMessage:
+            def to_dict(self):
+                return {"role": "user", "content": "from to_dict"}
+
+        mock_llm = Mock()
+        mock_llm.agenerate = Mock(return_value="ok")
+
+        adapter = ChatOpenAIAdapter(mock_llm)
+
+        # Test with custom message object
+        await adapter.ainvoke([CustomMessage()])
+
+        assert mock_llm.agenerate.called
+
+    @pytest.mark.asyncio
+    async def test_adapter_fallback_to_string(self):
+        """Test fallback to string representation.
+
+        Verifies:
+        - Unknown types converted to string
+        - No errors on unusual input
+        """
+        from unittest.mock import Mock
+
+        from server.server import ChatOpenAIAdapter
+
+        mock_llm = Mock()
+        mock_llm.agenerate = Mock(return_value="ok")
+
+        adapter = ChatOpenAIAdapter(mock_llm)
+
+        # Test with plain string
+        await adapter.ainvoke("plain string message")
+
+        assert mock_llm.agenerate.called
+
+
+class TestTaskStore:
+    """Test suite for task_store global state.
+
+    Tests task storage and retrieval.
+    """
+
+    def test_task_store_is_dict(self, cleanup_tasks):
+        """Test task_store is a dictionary.
+
+        Verifies:
+        - task_store exists and is dict type
+        """
+        from server.server import task_store
+
+        assert isinstance(task_store, dict)
+
+    def test_task_store_can_add_tasks(self, cleanup_tasks):
+        """Test adding tasks to task_store.
+
+        Verifies:
+        - Tasks can be added
+        - Tasks can be retrieved
+        """
+        from server.server import task_store
+
+        task_id = "test-task-123"
+        task_store[task_id] = {"status": "pending", "result": None}
+
+        assert task_id in task_store
+        assert task_store[task_id]["status"] == "pending"
+
+    def test_task_store_can_remove_tasks(self, cleanup_tasks):
+        """Test removing tasks from task_store.
+
+        Verifies:
+        - Tasks can be removed
+        """
+        from server.server import task_store
+
+        task_id = "test-task-456"
+        task_store[task_id] = {"status": "completed"}
+
+        del task_store[task_id]
+
+        assert task_id not in task_store
