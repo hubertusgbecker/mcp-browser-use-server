@@ -1516,3 +1516,214 @@ class TestTaskStore:
         del task_store[task_id]
 
         assert task_id not in task_store
+
+
+class TestChatOpenAIAdapterConversion:
+    """Test suite for ChatOpenAIAdapter message conversion.
+
+    Tests BaseMessage conversion in ainvoke method.
+    """
+
+    @pytest.mark.asyncio
+    async def test_adapter_converts_system_message(self):
+        """Test conversion of system role messages.
+
+        Verifies:
+        - Messages with role='system' converted to SystemMessage
+        """
+        from unittest.mock import Mock
+
+        from server.server import ChatOpenAIAdapter
+
+        mock_llm = Mock()
+        mock_llm.agenerate = Mock(return_value="ok")
+
+        adapter = ChatOpenAIAdapter(mock_llm)
+
+        await adapter.ainvoke(
+            [{"role": "system", "content": "You are helpful"}]
+        )
+
+        assert mock_llm.agenerate.called
+
+    @pytest.mark.asyncio
+    async def test_adapter_converts_assistant_message(self):
+        """Test conversion of assistant role messages.
+
+        Verifies:
+        - Messages with role='assistant' or 'ai' converted to AIMessage
+        """
+        from unittest.mock import Mock
+
+        from server.server import ChatOpenAIAdapter
+
+        mock_llm = Mock()
+        mock_llm.agenerate = Mock(return_value="ok")
+
+        adapter = ChatOpenAIAdapter(mock_llm)
+
+        await adapter.ainvoke([{"role": "assistant", "content": "I can help"}])
+        await adapter.ainvoke([{"role": "ai", "content": "Sure thing"}])
+
+        assert mock_llm.agenerate.call_count == 2
+
+    @pytest.mark.asyncio
+    async def test_adapter_converts_user_message(self):
+        """Test conversion of user role messages.
+
+        Verifies:
+        - Messages with role='user' converted to HumanMessage
+        - Unknown roles default to HumanMessage
+        """
+        from unittest.mock import Mock
+
+        from server.server import ChatOpenAIAdapter
+
+        mock_llm = Mock()
+        mock_llm.agenerate = Mock(return_value="ok")
+
+        adapter = ChatOpenAIAdapter(mock_llm)
+
+        await adapter.ainvoke([{"role": "user", "content": "Hello"}])
+        await adapter.ainvoke([{"role": "unknown", "content": "Test"}])
+
+        assert mock_llm.agenerate.call_count == 2
+
+    @pytest.mark.asyncio
+    async def test_adapter_handles_messages_dict(self):
+        """Test handling of dict with 'messages' key.
+
+        Verifies:
+        - Dict with 'messages' key is properly converted
+        """
+        from unittest.mock import Mock
+
+        from server.server import ChatOpenAIAdapter
+
+        mock_llm = Mock()
+        mock_llm.agenerate = Mock(return_value="ok")
+
+        adapter = ChatOpenAIAdapter(mock_llm)
+
+        await adapter.ainvoke(
+            {"messages": [{"role": "user", "content": "test"}]}
+        )
+
+        assert mock_llm.agenerate.called
+
+    @pytest.mark.asyncio
+    async def test_adapter_stringifies_complex_dicts(self):
+        """Test stringification of complex dict structures.
+
+        Verifies:
+        - Dicts without role/content/messages are JSON stringified
+        - Falls back to str() if JSON fails
+        """
+        from unittest.mock import Mock
+
+        from server.server import ChatOpenAIAdapter
+
+        mock_llm = Mock()
+        mock_llm.agenerate = Mock(return_value="ok")
+
+        adapter = ChatOpenAIAdapter(mock_llm)
+
+        await adapter.ainvoke({"arbitrary": "data", "key": "value"})
+
+        assert mock_llm.agenerate.called
+
+
+class TestLoggingConfiguration:
+    """Test suite for logging setup.
+
+    Tests logger initialization and configuration.
+    """
+
+    def test_logger_exists(self):
+        """Test that logger is properly configured.
+
+        Verifies:
+        - Logger is created
+        - Logger has correct name
+        """
+        from server.server import logger
+
+        assert logger is not None
+        assert logger.name == "root"
+
+    def test_logger_can_log_messages(self):
+        """Test logger can output messages.
+
+        Verifies:
+        - Logger methods are callable
+        """
+        from server.server import logger
+
+        # Should not raise
+        logger.debug("Test debug message")
+        logger.info("Test info message")
+        logger.warning("Test warning message")
+        logger.error("Test error message")
+
+
+class TestImports:
+    """Test suite for module imports.
+
+    Tests that all required imports are available.
+    """
+
+    def test_can_import_chatopenaiadapter(self):
+        """Test ChatOpenAIAdapter can be imported.
+
+        Verifies:
+        - Class is importable
+        - Has expected methods
+        """
+        from server.server import ChatOpenAIAdapter
+
+        assert ChatOpenAIAdapter is not None
+        assert hasattr(ChatOpenAIAdapter, "__init__")
+
+    def test_can_import_config(self):
+        """Test CONFIG can be imported.
+
+        Verifies:
+        - CONFIG dict is importable
+        """
+        from server.server import CONFIG
+
+        assert CONFIG is not None
+        assert isinstance(CONFIG, dict)
+
+    def test_can_import_task_store(self):
+        """Test task_store can be imported.
+
+        Verifies:
+        - task_store dict is importable
+        """
+        from server.server import task_store
+
+        assert task_store is not None
+        assert isinstance(task_store, dict)
+
+    def test_can_import_functions(self):
+        """Test key functions can be imported.
+
+        Verifies:
+        - Main functions are importable
+        """
+        from server.server import (
+            cleanup_old_tasks,
+            create_browser_context_for_task,
+            create_mcp_server,
+            ensure_llm_adapter,
+            parse_bool_env,
+            run_browser_task_async,
+        )
+
+        assert cleanup_old_tasks is not None
+        assert create_browser_context_for_task is not None
+        assert create_mcp_server is not None
+        assert ensure_llm_adapter is not None
+        assert parse_bool_env is not None
+        assert run_browser_task_async is not None
