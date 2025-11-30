@@ -698,3 +698,36 @@ class TestChatOpenAIAdapter:
         result = await adapter.agenerate("test prompt")
 
         assert result == mock_response
+
+
+class TestEnsureLLMAdapter:
+    """Test ensure_llm_adapter function."""
+
+    def test_ensure_llm_adapter_returns_none_for_none_input(self):
+        """Test ensure_llm_adapter returns None when given None.
+
+        Verifies:
+        - Returns None when llm parameter is None
+        """
+        from server.server import ensure_llm_adapter
+
+        result = ensure_llm_adapter(None)
+
+        assert result is None
+
+    def test_ensure_llm_adapter_returns_llm_unchanged(self):
+        """Test ensure_llm_adapter returns LLM instance unchanged.
+
+        Verifies:
+        - Returns the same LLM object without wrapping
+        - Works with browser-use v0.9.7+ ChatOpenAI
+        """
+        from unittest.mock import Mock
+        from server.server import ensure_llm_adapter
+
+        mock_llm = Mock()
+        mock_llm.model = "gpt-4o-mini"
+
+        result = ensure_llm_adapter(mock_llm)
+
+        assert result is mock_llm
