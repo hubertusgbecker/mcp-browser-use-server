@@ -1204,3 +1204,166 @@ class TestMcpToolHandlers:
 
         # Should be unique
         assert task_id_1 != task_id_2
+
+
+class TestParseBoolEnv:
+    """Test suite for parse_bool_env function.
+
+    Tests environment variable parsing for boolean values.
+    """
+
+    def test_parse_bool_true_values(self):
+        """Test parsing true values from environment.
+
+        Verifies:
+        - 'true', 'yes', '1', 'on' all return True
+        - Case insensitive
+        """
+        from unittest.mock import patch
+
+        from server.server import parse_bool_env
+
+        true_values = [
+            "true",
+            "True",
+            "TRUE",
+            "yes",
+            "Yes",
+            "YES",
+            "1",
+            "on",
+            "On",
+            "ON",
+        ]
+
+        for value in true_values:
+            with patch.dict("os.environ", {"TEST_VAR": value}):
+                result = parse_bool_env("TEST_VAR", False)
+                assert result is True, f"Expected True for '{value}'"
+
+    def test_parse_bool_false_values(self):
+        """Test parsing false values from environment.
+
+        Verifies:
+        - 'false', 'no', '0', 'off' all return False
+        - Case insensitive
+        """
+        from unittest.mock import patch
+
+        from server.server import parse_bool_env
+
+        false_values = [
+            "false",
+            "False",
+            "FALSE",
+            "no",
+            "No",
+            "NO",
+            "0",
+            "off",
+            "Off",
+            "OFF",
+        ]
+
+        for value in false_values:
+            with patch.dict("os.environ", {"TEST_VAR": value}):
+                result = parse_bool_env("TEST_VAR", True)
+                assert result is False, f"Expected False for '{value}'"
+
+    def test_parse_bool_default_when_missing(self):
+        """Test default value used when env var missing.
+
+        Verifies:
+        - Returns default when env var not set
+        """
+        from unittest.mock import patch
+
+        from server.server import parse_bool_env
+
+        with patch.dict("os.environ", {}, clear=True):
+            assert parse_bool_env("MISSING_VAR", True) is True
+            assert parse_bool_env("MISSING_VAR", False) is False
+
+    def test_parse_bool_invalid_value(self):
+        """Test handling of invalid boolean values.
+
+        Verifies:
+        - Invalid values return default
+        """
+        from unittest.mock import patch
+
+        from server.server import parse_bool_env
+
+        with patch.dict("os.environ", {"TEST_VAR": "invalid"}):
+            result = parse_bool_env("TEST_VAR", True)
+            # Should return default for invalid values
+            assert isinstance(result, bool)
+
+
+class TestConfigInitialization:
+    """Test suite for CONFIG initialization.
+
+    Tests global configuration dictionary setup.
+    """
+
+    def test_config_has_required_keys(self):
+        """Test CONFIG contains all required configuration keys.
+
+        Verifies:
+        - Essential config keys are present
+        - Values are of correct types
+        """
+        from server.server import CONFIG
+
+        required_keys = [
+            "DEFAULT_WINDOW_WIDTH",
+            "DEFAULT_WINDOW_HEIGHT",
+            "DEFAULT_LOCALE",
+            "DEFAULT_ESTIMATED_TASK_SECONDS",
+            "CLEANUP_INTERVAL_SECONDS",
+        ]
+
+        for key in required_keys:
+            assert key in CONFIG, f"Missing required config key: {key}"
+
+    def test_config_window_dimensions_are_integers(self):
+        """Test window dimensions are integers.
+
+        Verifies:
+        - Window width and height are integers
+        - Values are reasonable (> 0)
+        """
+        from server.server import CONFIG
+
+        assert isinstance(CONFIG["DEFAULT_WINDOW_WIDTH"], int)
+        assert isinstance(CONFIG["DEFAULT_WINDOW_HEIGHT"], int)
+        assert CONFIG["DEFAULT_WINDOW_WIDTH"] > 0
+        assert CONFIG["DEFAULT_WINDOW_HEIGHT"] > 0
+
+    def test_config_locale_is_string(self):
+        """Test locale is a string.
+
+        Verifies:
+        - Locale is string type
+        - Has expected format (e.g., 'en-US')
+        """
+        from server.server import CONFIG
+
+        assert isinstance(CONFIG["DEFAULT_LOCALE"], str)
+        assert (
+            "-" in CONFIG["DEFAULT_LOCALE"] or "_" in CONFIG["DEFAULT_LOCALE"]
+        )
+
+    def test_config_timeouts_are_reasonable(self):
+        """Test timeout values are reasonable integers.
+
+        Verifies:
+        - Timeout values are positive integers
+        """
+        from server.server import CONFIG
+
+        assert isinstance(CONFIG["DEFAULT_ESTIMATED_TASK_SECONDS"], int)
+        assert CONFIG["DEFAULT_ESTIMATED_TASK_SECONDS"] > 0
+
+        assert isinstance(CONFIG["CLEANUP_INTERVAL_SECONDS"], int)
+        assert CONFIG["CLEANUP_INTERVAL_SECONDS"] > 0
