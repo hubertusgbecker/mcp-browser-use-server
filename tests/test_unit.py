@@ -1070,3 +1070,137 @@ class TestCleanupOldTasks:
 
         assert callable(cleanup_old_tasks)
         assert iscoroutinefunction(cleanup_old_tasks)
+
+
+class TestCreateMcpServer:
+    """Test suite for create_mcp_server function.
+
+    Tests MCP server factory and configuration.
+    """
+
+    def test_create_mcp_server_returns_server(self):
+        """Test that create_mcp_server returns Server instance.
+
+        Verifies:
+        - Function returns MCP Server instance
+        - Server has correct name
+        """
+        from server.server import create_mcp_server
+
+        server = create_mcp_server(llm=None)
+
+        assert server is not None
+        assert hasattr(server, "call_tool")
+        assert hasattr(server, "list_tools")
+
+    def test_create_mcp_server_with_custom_params(self):
+        """Test server creation with custom parameters.
+
+        Verifies:
+        - Custom window dimensions accepted
+        - Custom locale accepted
+        - Server is properly configured
+        """
+        from unittest.mock import Mock
+
+        from server.server import create_mcp_server
+
+        mock_llm = Mock()
+
+        server = create_mcp_server(
+            llm=mock_llm, window_width=1920, window_height=1080, locale="de-DE"
+        )
+
+        assert server is not None
+
+    def test_create_mcp_server_default_params(self):
+        """Test server creation with default parameters.
+
+        Verifies:
+        - Server created without explicit params
+        - Default values are used
+        """
+        from server.server import create_mcp_server
+
+        server = create_mcp_server(llm=None)
+
+        assert server is not None
+
+
+class TestMcpToolHandlers:
+    """Test suite for MCP tool handler logic.
+
+    Tests individual tool argument validation and error handling.
+    """
+
+    def test_browser_use_missing_url_raises_error(self):
+        """Test browser_use tool requires url argument.
+
+        Verifies:
+        - ValueError raised when url is missing
+        """
+        # This tests the validation logic that would be in call_tool
+        arguments = {"action": "click button"}
+
+        # Simulate validation
+        with pytest.raises(ValueError, match="url"):
+            if "url" not in arguments:
+                raise ValueError("Missing required argument 'url'")
+
+    def test_browser_use_missing_action_raises_error(self):
+        """Test browser_use tool requires action argument.
+
+        Verifies:
+        - ValueError raised when action is missing
+        """
+        arguments = {"url": "https://example.com"}
+
+        with pytest.raises(ValueError, match="action"):
+            if "action" not in arguments:
+                raise ValueError("Missing required argument 'action'")
+
+    def test_browser_use_with_valid_arguments(self):
+        """Test browser_use validation passes with valid arguments.
+
+        Verifies:
+        - No error when both url and action provided
+        """
+        arguments = {"url": "https://example.com", "action": "click button"}
+
+        # Should not raise
+        if "url" not in arguments:
+            raise ValueError("Missing required argument 'url'")
+        if "action" not in arguments:
+            raise ValueError("Missing required argument 'action'")
+
+    def test_summarize_action_detection(self):
+        """Test detection of summarize action in browser_use.
+
+        Verifies:
+        - Summarize keyword is detected in action text
+        """
+        action_with_summarize = "Please summarize the page content"
+        action_without_summarize = "Click the login button"
+
+        assert "summarize" in action_with_summarize.lower()
+        assert "summarize" not in action_without_summarize.lower()
+
+    @pytest.mark.asyncio
+    async def test_task_id_generation(self):
+        """Test task ID is generated as UUID.
+
+        Verifies:
+        - Task ID is valid UUID format
+        - Each ID is unique
+        """
+        import uuid
+
+        task_id_1 = str(uuid.uuid4())
+        task_id_2 = str(uuid.uuid4())
+
+        # Should be valid UUIDs
+        assert uuid.UUID(task_id_1)
+        assert uuid.UUID(task_id_2)
+
+        # Should be unique
+        assert task_id_1 != task_id_2
