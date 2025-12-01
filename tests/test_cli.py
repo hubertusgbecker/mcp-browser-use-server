@@ -558,7 +558,6 @@ class TestCLIExceptionHandlers:
     def test_browser_use_import_failure(self, monkeypatch):
         """Test that CLI handles browser_use import failure gracefully (lines 39-40)."""
         # Force import failure by making the module import raise
-        import sys
 
         # Mock the browser_use module to raise on import
         class FailingModule:

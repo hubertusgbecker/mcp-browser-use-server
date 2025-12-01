@@ -1,6 +1,5 @@
 """Tests for MCP tool validation errors and edge cases."""
 
-import json
 
 import pytest
 

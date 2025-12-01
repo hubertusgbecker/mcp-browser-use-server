@@ -2394,7 +2394,7 @@ def create_mcp_server(
         """
         # Convert URI to string if needed (MCP passes AnyUrl objects)
         uri_str = str(uri)
-        
+
         # Extract task ID from URI
         if not uri_str.startswith("resource://browser_task/"):
             return json.dumps(
