@@ -614,10 +614,13 @@ async def run_browser_task_async(
         agent_output = None
         step_number = None
 
+        # If first arg is a dict, it may contain step metadata. However,
+        # callers sometimes pass the actual agent output via kwargs
+        # (e.g., agent_output=...), so prefer that when available.
         if len(args) == 1 and isinstance(args[0], dict):
             data = args[0]
             step_number = data.get("step") or data.get("step_number")
-            agent_output = data
+            agent_output = kwargs.get("agent_output") or kwargs.get("output") or data
         elif len(args) >= 3:
             agent_output = args[1]
             step_number = args[2]
@@ -765,12 +768,18 @@ async def run_browser_task_async(
         except Exception:
             browser_profile_for_agent = None
 
+        # Pass callbacks under both the newer `register_*` names and the
+        # historical `on_step`/`on_done` names to preserve compatibility
+        # with different browser-use versions and with our unit tests
+        # which mock Agent and expect `on_step`/`on_done` kwargs.
         agent: Any = Agent(
             task=task_text,
             llm=cast(Any, llm_for_agent),
             browser_profile=browser_profile_for_agent,
             register_new_step_callback=step_callback,
             register_done_callback=done_callback,
+            on_step=step_callback,
+            on_done=done_callback,
         )
 
         agent_result = await agent.run(max_steps=CONFIG["MAX_AGENT_STEPS"])
