@@ -2382,7 +2382,7 @@ def create_mcp_server(
         return resources
 
     @app.read_resource()
-    async def read_resource(uri: str) -> list[types.ResourceContents]:
+    async def read_resource(uri: str) -> str:
         """
         Read a resource for the MCP client.
 
@@ -2390,46 +2390,25 @@ def create_mcp_server(
             uri: The URI of the resource to read
 
         Returns:
-            The contents of the resource
+            The contents of the resource as a JSON string
         """
+        # Convert URI to string if needed (MCP passes AnyUrl objects)
+        uri_str = str(uri)
+        
         # Extract task ID from URI
-        if not uri.startswith("resource://browser_task/"):
-            return [
-                cast(
-                    types.ResourceContents,
-                    {
-                        "type": "text",
-                        "text": json.dumps(
-                            {"error": f"Invalid resource URI: {uri}"}, indent=2
-                        ),
-                    },
-                )
-            ]
+        if not uri_str.startswith("resource://browser_task/"):
+            return json.dumps(
+                {"error": f"Invalid resource URI: {uri_str}"}, indent=2
+            )
 
-        task_id = uri.replace("resource://browser_task/", "")
+        task_id = uri_str.replace("resource://browser_task/", "")
         if task_id not in task_store:
-            return [
-                cast(
-                    types.ResourceContents,
-                    {
-                        "type": "text",
-                        "text": json.dumps(
-                            {"error": f"Task not found: {task_id}"}, indent=2
-                        ),
-                    },
-                )
-            ]
+            return json.dumps(
+                {"error": f"Task not found: {task_id}"}, indent=2
+            )
 
         # Return task data
-        return [
-            cast(
-                types.ResourceContents,
-                {
-                    "type": "text",
-                    "text": json.dumps(task_store[task_id], indent=2),
-                },
-            )
-        ]
+        return json.dumps(task_store[task_id], indent=2)
 
     # Add cleanup_old_tasks function to app for later scheduling
     app.cleanup_old_tasks = cleanup_old_tasks  # type: ignore[attr-defined]
