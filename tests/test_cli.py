@@ -567,13 +567,17 @@ class TestCLIExceptionHandlers:
         # The exception handlers at lines 39-40 and 46-47 are global level
         # They're already covered by the fact that imports work
         # But let's verify the fallback behavior
-        assert cli_mod.BUChatOpenAI is not None or cli_mod.LCChatOpenAI is not None
+        assert (
+            cli_mod.BUChatOpenAI is not None or cli_mod.LCChatOpenAI is not None
+        )
 
     def test_langchain_openai_import_failure(self):
         """Test that CLI handles langchain_openai import failure gracefully (lines 46-47)."""
         # These exception handlers allow the CLI to work even if optional imports fail
         # Verify that at least one LLM provider is available
-        assert cli_mod.BUChatOpenAI is not None or cli_mod.LCChatOpenAI is not None
+        assert (
+            cli_mod.BUChatOpenAI is not None or cli_mod.LCChatOpenAI is not None
+        )
 
     def test_logger_setlevel_exception_in_run_browser_agent(self, monkeypatch):
         """Test exception handler when setting log level fails (lines 222-224)."""
@@ -641,9 +645,13 @@ class TestCLIExceptionHandlers:
             m.setattr("server.server.run_browser_task_async", fake_run)
             # Patch the BUChatOpenAI or LCChatOpenAI to use our mock
             if cli_mod.BUChatOpenAI:
-                m.setattr("mcp_browser_use_server.cli.BUChatOpenAI", MockLLMNoModel)
+                m.setattr(
+                    "mcp_browser_use_server.cli.BUChatOpenAI", MockLLMNoModel
+                )
             else:
-                m.setattr("mcp_browser_use_server.cli.LCChatOpenAI", MockLLMNoModel)
+                m.setattr(
+                    "mcp_browser_use_server.cli.LCChatOpenAI", MockLLMNoModel
+                )
 
             runner = CliRunner()
             result = runner.invoke(
@@ -671,9 +679,13 @@ class TestCLIExceptionHandlers:
             m.setattr("server.server.run_browser_task_async", fake_run)
             # Patch the LLM class to raise
             if cli_mod.BUChatOpenAI:
-                m.setattr("mcp_browser_use_server.cli.BUChatOpenAI", raising_init)
+                m.setattr(
+                    "mcp_browser_use_server.cli.BUChatOpenAI", raising_init
+                )
             if cli_mod.LCChatOpenAI:
-                m.setattr("mcp_browser_use_server.cli.LCChatOpenAI", raising_init)
+                m.setattr(
+                    "mcp_browser_use_server.cli.LCChatOpenAI", raising_init
+                )
 
             runner = CliRunner()
             result = runner.invoke(
@@ -682,4 +694,3 @@ class TestCLIExceptionHandlers:
 
             # Should still succeed with llm=None
             assert result.exit_code == 0
-

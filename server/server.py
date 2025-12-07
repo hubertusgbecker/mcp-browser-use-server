@@ -620,7 +620,9 @@ async def run_browser_task_async(
         if len(args) == 1 and isinstance(args[0], dict):
             data = args[0]
             step_number = data.get("step") or data.get("step_number")
-            agent_output = kwargs.get("agent_output") or kwargs.get("output") or data
+            agent_output = (
+                kwargs.get("agent_output") or kwargs.get("output") or data
+            )
         elif len(args) >= 3:
             agent_output = args[1]
             step_number = args[2]
@@ -1319,10 +1321,46 @@ def create_mcp_server(
                         )
                     ]
 
-                # Get live browser state
-                state_response = (
-                    await browser_session.get_browser_state_summary()
-                )
+                # Get live browser state with timeout protection
+                try:
+                    state_response = await asyncio.wait_for(
+                        browser_session.get_browser_state_summary(),
+                        timeout=10.0,  # 10 second timeout
+                    )
+                except asyncio.TimeoutError:
+                    logger.warning(
+                        f"Timeout getting browser state for session {session_id_arg}"
+                    )
+                    return [
+                        types.TextContent(
+                            type="text",
+                            text=json.dumps(
+                                {
+                                    "error": "Timeout getting browser state",
+                                    "session_id": session_id_arg,
+                                    "message": "The browser state retrieval timed out after 10 seconds",
+                                },
+                                indent=2,
+                            ),
+                        )
+                    ]
+                except Exception as e:
+                    logger.error(
+                        f"Error getting browser state for session {session_id_arg}: {e}",
+                        exc_info=True,
+                    )
+                    return [
+                        types.TextContent(
+                            type="text",
+                            text=json.dumps(
+                                {
+                                    "error": f"Error getting browser state: {str(e)}",
+                                    "session_id": session_id_arg,
+                                },
+                                indent=2,
+                            ),
+                        )
+                    ]
 
                 # Serialize with depth limit and circular reference detection
                 import dataclasses
@@ -1404,13 +1442,28 @@ def create_mcp_server(
                 if include_screenshot:
                     try:
                         page = browser_session.get_current_page()
-                        screenshot_bytes = await page.screenshot()
+                        screenshot_bytes = await asyncio.wait_for(
+                            page.screenshot(),
+                            timeout=5.0,  # 5 second timeout for screenshot
+                        )
                         if not isinstance(state_response, dict):
                             state_response = {}
                         state_response["screenshot"] = base64.b64encode(
                             screenshot_bytes
                         ).decode("utf-8")
+                    except asyncio.TimeoutError:
+                        logger.warning(
+                            f"Timeout capturing screenshot for session {session_id_arg}"
+                        )
+                        if not isinstance(state_response, dict):
+                            state_response = {}
+                        state_response["screenshot_error"] = (
+                            "Screenshot capture timed out"
+                        )
                     except Exception as e:
+                        logger.error(
+                            f"Error capturing screenshot for session {session_id_arg}: {e}"
+                        )
                         if not isinstance(state_response, dict):
                             state_response = {}
                         state_response["screenshot_error"] = str(e)
@@ -2412,9 +2465,7 @@ def create_mcp_server(
 
         task_id = uri_str.replace("resource://browser_task/", "")
         if task_id not in task_store:
-            return json.dumps(
-                {"error": f"Task not found: {task_id}"}, indent=2
-            )
+            return json.dumps({"error": f"Task not found: {task_id}"}, indent=2)
 
         # Return task data
         return json.dumps(task_store[task_id], indent=2)

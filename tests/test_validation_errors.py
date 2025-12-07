@@ -1,6 +1,5 @@
 """Tests for MCP tool validation errors and edge cases."""
 
-
 import pytest
 
 from server.server import create_mcp_server, task_store
@@ -63,7 +62,10 @@ class TestValidationErrors:
         )
 
         response_text = result.root.content[0].text
-        assert "index" in response_text.lower() or "element" in response_text.lower()
+        assert (
+            "index" in response_text.lower()
+            or "element" in response_text.lower()
+        )
         assert result.root.isError or "error" in response_text.lower()
 
     @pytest.mark.asyncio

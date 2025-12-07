@@ -14,7 +14,9 @@ class TestBrowserTaskExecution:
     """Test browser task execution workflows."""
 
     @pytest.mark.asyncio
-    async def test_run_browser_task_basic_workflow(self, mock_llm, cleanup_tasks):
+    async def test_run_browser_task_basic_workflow(
+        self, mock_llm, cleanup_tasks
+    ):
         """Test basic browser task execution workflow.
 
         Covers:
@@ -32,9 +34,13 @@ class TestBrowserTaskExecution:
 
         # Mock Agent execution
         mock_agent_result = MagicMock()
-        mock_agent_result.final_result = MagicMock(extracted_content="Test result")
+        mock_agent_result.final_result = MagicMock(
+            extracted_content="Test result"
+        )
 
-        with patch("server.server.create_browser_context_for_task") as mock_create:
+        with patch(
+            "server.server.create_browser_context_for_task"
+        ) as mock_create:
             with patch("server.server.Agent") as mock_agent_cls:
                 mock_create.return_value = (mock_context, mock_browser)
                 mock_agent_instance = AsyncMock()
@@ -43,9 +49,7 @@ class TestBrowserTaskExecution:
 
                 # Execute task
                 await run_browser_task_async(
-                    task_id=task_id,
-                    instruction=instruction,
-                    llm=mock_llm
+                    task_id=task_id, instruction=instruction, llm=mock_llm
                 )
 
                 # Verify task was created and completed
@@ -72,7 +76,9 @@ class TestBrowserTaskExecution:
         mock_agent_result = MagicMock()
         mock_agent_result.final_result = MagicMock(extracted_content="Result")
 
-        with patch("server.server.create_browser_context_for_task") as mock_create:
+        with patch(
+            "server.server.create_browser_context_for_task"
+        ) as mock_create:
             with patch("server.server.Agent") as mock_agent_cls:
                 mock_create.return_value = (mock_context, mock_browser)
 
@@ -90,9 +96,7 @@ class TestBrowserTaskExecution:
 
                 # Execute task
                 await run_browser_task_async(
-                    task_id=task_id,
-                    instruction=instruction,
-                    llm=mock_llm
+                    task_id=task_id, instruction=instruction, llm=mock_llm
                 )
 
                 # Verify step_callback was passed
@@ -121,7 +125,9 @@ class TestBrowserTaskExecution:
         mock_result = MagicMock()
         mock_result.final_result = MagicMock(extracted_content="Result")
 
-        with patch("server.server.create_browser_context_for_task") as mock_create:
+        with patch(
+            "server.server.create_browser_context_for_task"
+        ) as mock_create:
             with patch("server.server.Agent") as mock_agent_cls:
                 mock_create.return_value = (mock_context, mock_browser)
 
@@ -137,9 +143,7 @@ class TestBrowserTaskExecution:
                 mock_agent_cls.side_effect = agent_init
 
                 await run_browser_task_async(
-                    task_id=task_id,
-                    instruction=instruction,
-                    llm=mock_llm
+                    task_id=task_id, instruction=instruction, llm=mock_llm
                 )
 
                 # Call with args format: (?, agent_output, step_number)
@@ -163,7 +167,9 @@ class TestBrowserTaskExecution:
         mock_result = MagicMock()
         mock_result.final_result = MagicMock(extracted_content="Result")
 
-        with patch("server.server.create_browser_context_for_task") as mock_create:
+        with patch(
+            "server.server.create_browser_context_for_task"
+        ) as mock_create:
             with patch("server.server.Agent") as mock_agent_cls:
                 mock_create.return_value = (mock_context, mock_browser)
 
@@ -179,9 +185,7 @@ class TestBrowserTaskExecution:
                 mock_agent_cls.side_effect = agent_init
 
                 await run_browser_task_async(
-                    task_id=task_id,
-                    instruction=instruction,
-                    llm=mock_llm
+                    task_id=task_id, instruction=instruction, llm=mock_llm
                 )
 
                 # Call with kwargs format
@@ -190,7 +194,9 @@ class TestBrowserTaskExecution:
                 assert task_store[task_id]["progress"]["current_step"] == 3
 
     @pytest.mark.asyncio
-    async def test_step_callback_without_step_number(self, mock_llm, cleanup_tasks):
+    async def test_step_callback_without_step_number(
+        self, mock_llm, cleanup_tasks
+    ):
         """Test step_callback when step number is missing.
 
         Covers lines 631-636: warning when no step number
@@ -204,7 +210,9 @@ class TestBrowserTaskExecution:
         mock_result = MagicMock()
         mock_result.final_result = MagicMock(extracted_content="Result")
 
-        with patch("server.server.create_browser_context_for_task") as mock_create:
+        with patch(
+            "server.server.create_browser_context_for_task"
+        ) as mock_create:
             with patch("server.server.Agent") as mock_agent_cls:
                 mock_create.return_value = (mock_context, mock_browser)
 
@@ -220,9 +228,7 @@ class TestBrowserTaskExecution:
                 mock_agent_cls.side_effect = agent_init
 
                 await run_browser_task_async(
-                    task_id=task_id,
-                    instruction=instruction,
-                    llm=mock_llm
+                    task_id=task_id, instruction=instruction, llm=mock_llm
                 )
 
                 # Call without step number - should log warning and return early
@@ -230,10 +236,15 @@ class TestBrowserTaskExecution:
                 captured_step_callback(agent_output=MagicMock())
 
                 # Step should not have been updated
-                assert task_store[task_id]["progress"]["current_step"] == initial_step
+                assert (
+                    task_store[task_id]["progress"]["current_step"]
+                    == initial_step
+                )
 
     @pytest.mark.asyncio
-    async def test_step_callback_with_agent_output_attributes(self, mock_llm, cleanup_tasks):
+    async def test_step_callback_with_agent_output_attributes(
+        self, mock_llm, cleanup_tasks
+    ):
         """Test step_callback accessing agent_output attributes.
 
         Covers lines 645-653: accessing current_state.next_goal
@@ -247,7 +258,9 @@ class TestBrowserTaskExecution:
         mock_result = MagicMock()
         mock_result.final_result = MagicMock(extracted_content="Result")
 
-        with patch("server.server.create_browser_context_for_task") as mock_create:
+        with patch(
+            "server.server.create_browser_context_for_task"
+        ) as mock_create:
             with patch("server.server.Agent") as mock_agent_cls:
                 mock_create.return_value = (mock_context, mock_browser)
 
@@ -263,9 +276,7 @@ class TestBrowserTaskExecution:
                 mock_agent_cls.side_effect = agent_init
 
                 await run_browser_task_async(
-                    task_id=task_id,
-                    instruction=instruction,
-                    llm=mock_llm
+                    task_id=task_id, instruction=instruction, llm=mock_llm
                 )
 
                 # Create agent_output with current_state.next_goal
@@ -273,11 +284,16 @@ class TestBrowserTaskExecution:
                 mock_agent_output.current_state = MagicMock()
                 mock_agent_output.current_state.next_goal = "Test goal"
 
-                captured_step_callback({"step": 1}, agent_output=mock_agent_output)
+                captured_step_callback(
+                    {"step": 1}, agent_output=mock_agent_output
+                )
 
                 # Verify goal was captured in step info
                 steps = task_store[task_id]["progress"]["steps"]
-                assert any("goal" in step and step["goal"] == "Test goal" for step in steps)
+                assert any(
+                    "goal" in step and step["goal"] == "Test goal"
+                    for step in steps
+                )
 
     @pytest.mark.asyncio
     async def test_done_callback_execution(self, mock_llm, cleanup_tasks):
@@ -294,7 +310,9 @@ class TestBrowserTaskExecution:
         mock_result = MagicMock()
         mock_result.final_result = MagicMock(extracted_content="Result")
 
-        with patch("server.server.create_browser_context_for_task") as mock_create:
+        with patch(
+            "server.server.create_browser_context_for_task"
+        ) as mock_create:
             with patch("server.server.Agent") as mock_agent_cls:
                 mock_create.return_value = (mock_context, mock_browser)
 
@@ -310,9 +328,7 @@ class TestBrowserTaskExecution:
                 mock_agent_cls.side_effect = agent_init
 
                 await run_browser_task_async(
-                    task_id=task_id,
-                    instruction=instruction,
-                    llm=mock_llm
+                    task_id=task_id, instruction=instruction, llm=mock_llm
                 )
 
                 # Verify done_callback was passed
@@ -329,7 +345,9 @@ class TestBrowserTaskExecution:
                 assert any(step.get("status") == "completed" for step in steps)
 
     @pytest.mark.asyncio
-    async def test_done_callback_with_list_history(self, mock_llm, cleanup_tasks):
+    async def test_done_callback_with_list_history(
+        self, mock_llm, cleanup_tasks
+    ):
         """Test done_callback with list/tuple history.
 
         Covers lines 662-665: isinstance check for list/tuple
@@ -343,7 +361,9 @@ class TestBrowserTaskExecution:
         mock_result = MagicMock()
         mock_result.final_result = MagicMock(extracted_content="Result")
 
-        with patch("server.server.create_browser_context_for_task") as mock_create:
+        with patch(
+            "server.server.create_browser_context_for_task"
+        ) as mock_create:
             with patch("server.server.Agent") as mock_agent_cls:
                 mock_create.return_value = (mock_context, mock_browser)
 
@@ -359,9 +379,7 @@ class TestBrowserTaskExecution:
                 mock_agent_cls.side_effect = agent_init
 
                 await run_browser_task_async(
-                    task_id=task_id,
-                    instruction=instruction,
-                    llm=mock_llm
+                    task_id=task_id, instruction=instruction, llm=mock_llm
                 )
 
                 # Test with list
@@ -384,7 +402,9 @@ class TestBrowserTaskExecution:
         mock_context.page = MagicMock()
         mock_browser = AsyncMock()
 
-        with patch("server.server.create_browser_context_for_task") as mock_create:
+        with patch(
+            "server.server.create_browser_context_for_task"
+        ) as mock_create:
             with patch("server.server.Agent") as mock_agent_cls:
                 mock_create.return_value = (mock_context, mock_browser)
 
@@ -395,9 +415,7 @@ class TestBrowserTaskExecution:
 
                 # Execute task
                 await run_browser_task_async(
-                    task_id=task_id,
-                    instruction=instruction,
-                    llm=mock_llm
+                    task_id=task_id, instruction=instruction, llm=mock_llm
                 )
 
                 # Verify task failed

@@ -227,6 +227,44 @@ class TestBrowserGetState:
             if decoded != fake_screenshot:
                 pytest.fail("Screenshot data did not match expected bytes")
 
+    @pytest.mark.asyncio
+    async def test_browser_get_state_timeout(self, mock_llm, cleanup_tasks):
+        """Test browser_get_state handles timeout gracefully."""
+        import asyncio
+        from unittest.mock import AsyncMock, MagicMock, patch
+
+        server = create_mcp_server(llm=mock_llm)
+        from mcp import types
+
+        # Mock session that hangs
+        async def slow_state_summary():
+            await asyncio.sleep(100)  # Simulate hanging call
+            return {"url": "should not reach"}
+
+        mock_session = MagicMock()
+        mock_session.get_browser_state_summary = slow_state_summary
+
+        with patch(
+            "server.session.get_session",
+            new_callable=AsyncMock,
+            return_value=mock_session,
+        ):
+            result = await server.request_handlers[types.CallToolRequest](
+                types.CallToolRequest(
+                    params=types.CallToolRequestParams(
+                        name="browser_get_state",
+                        arguments={"session_id": "sess-123"},
+                    )
+                )
+            )
+
+            # Should return error response instead of hanging
+            response_text = result.root.content[0].text
+            response_data = json.loads(response_text)
+            assert (
+                "error" in response_data or "timeout" in response_text.lower()
+            )
+
 
 class TestBrowserNavigate:
     """Test browser_navigate tool."""
