@@ -3,7 +3,6 @@
 <div align="center">
 
 [![GitHub](https://img.shields.io/badge/GitHub-hubertusgbecker-blue)](https://github.com/hubertusgbecker/mcp-browser-use-server)
-[![PyPI version](https://badge.fury.io/py/mcp-browser-use-server.svg)](https://badge.fury.io/py/mcp-browser-use-server)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Python 3.11+](https://img.shields.io/badge/python-3.11+-blue.svg)](https://www.python.org/downloads/)
 [![Security: KICS+Trivy](https://img.shields.io/badge/security-KICS%2BTrivy-green)](./.github/workflows/kics-security-scan.yml)
@@ -104,10 +103,7 @@ uv run playwright install --with-deps --no-shell chromium
 ### As a Package (Production)
 
 ```bash
-# Install from PyPI (when published)
-uv pip install mcp-browser-use-server
-
-# Or install from built wheel
+# Build and install from source
 uv build
 uv tool install dist/mcp_browser_use_server-*.whl
 ```
