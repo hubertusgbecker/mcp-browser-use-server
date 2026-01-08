@@ -9,7 +9,8 @@ services:
     # Service ports
     ports:
       # SSE server port (bound to all interfaces so external clients can reach it)
-      - "${HOST_PORT:-8081}:${HOST_PORT:-8081}"
+      # Maps HOST_PORT on host to 8081 inside container
+      - "${HOST_PORT:-8081}:8081"
       # VNC port for browser visualization (host:container)
       - "127.0.0.1:${VNC_HOST_PORT:-5900}:5900"
     env_file:
@@ -22,7 +23,7 @@ services:
       - LOG_LEVEL=${LOG_LEVEL:-INFO}
       - PYTHONUNBUFFERED=1
       - BROWSER_HEADLESS=${BROWSER_HEADLESS:-true}
-      - PORT=${HOST_PORT:-8081}
+      - PORT=8081
     volumes:
       # Mount .env file if it exists
       - ./.env:/app/.env:ro
@@ -40,7 +41,7 @@ services:
     # Avoid adding unnecessary capabilities; keep default safe capability set
     cap_add: []
     healthcheck:
-      test: ["CMD-SHELL", "curl -fsS http://127.0.0.1:${HOST_PORT:-8081}/health || exit 1"]
+      test: ["CMD-SHELL", "curl -fsS http://127.0.0.1:8081/health || exit 1"]
       interval: 30s
       timeout: 10s
       retries: 3
@@ -97,7 +98,7 @@ services:
     environment:
       - PROXY_PORT=${PROXY_PORT:-9000}
       - TARGET_HOST=${PROXY_TARGET_HOST:-mcp-browser-use-server}
-      - TARGET_PORT=${PROXY_TARGET_PORT:-8081}
+      - TARGET_PORT=8081
     networks:
       - mcp-network
     profiles:
@@ -113,7 +114,7 @@ services:
       start_period: 40s
     command: >
       sh -c "npm install -g mcp-proxy@1.2.0 && \
-      mcp-proxy --port ${PROXY_PORT:-9000} --target http://mcp-browser-use-server:${PROXY_TARGET_PORT:-8081}"
+      mcp-proxy --port ${PROXY_PORT:-9000} --target http://mcp-browser-use-server:8081"
 
   # Monitoring with Prometheus (optional)
   mcp-browser-use-prometheus:
