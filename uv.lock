@@ -202,13 +202,14 @@ wheels = [
 
 [[package]]
 name = "browser-use"
-version = "0.9.7"
+version = "0.11.2"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "aiohttp" },
     { name = "anthropic" },
     { name = "anyio" },
     { name = "authlib" },
+    { name = "browser-use-sdk" },
     { name = "bubus" },
     { name = "cdp-use" },
     { name = "click" },
@@ -242,9 +243,24 @@ dependencies = [
     { name = "typing-extensions" },
     { name = "uuid7" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/a2/b5/c8cc6255373d3f7bb20d50068cbf8ebbb8e01dcd12d081019a8ea60d692a/browser_use-0.9.7.tar.gz", hash = "sha256:01268203d1844b0f53078871c5af451057329808ecf8ac9b43faadf452201da1", size = 472506, upload-time = "2025-11-18T16:35:56.946Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/77/42/aacaba1ee2599101ccb14fde3c4732d6e994d9d616b3a7b9c12f8ac5d5b4/browser_use-0.11.2.tar.gz", hash = "sha256:543face2fd5662ee89526d2099a79e01468b51784cdcc85faa36a81fdae4aa68", size = 501474, upload-time = "2025-12-16T22:07:49.749Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/67/51/7145748fb582d451fbb9cff5dc1a42a4ff61ab7b5265e7efdbc553083aa9/browser_use-0.9.7-py3-none-any.whl", hash = "sha256:f0dc1c0ab9024a81e88fab1e37e8ca9d96912c68d7baf9b3b52da9dc43853751", size = 561239, upload-time = "2025-11-18T16:35:55.575Z" },
+    { url = "https://files.pythonhosted.org/packages/3d/04/9d0b9ee9b176fe329d424bf4337982b021b264295aa2fb9a7aef885abd61/browser_use-0.11.2-py3-none-any.whl", hash = "sha256:6ac57c0e2a495749fc83c1faee85001737567f8cd4301ebfcda2a886018a325b", size = 599219, upload-time = "2025-12-16T22:07:48.39Z" },
+]
+
+[[package]]
+name = "browser-use-sdk"
+version = "2.0.12"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "httpx" },
+    { name = "pydantic" },
+    { name = "pydantic-core" },
+    { name = "typing-extensions" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/8d/42/8c071273009a164e101c257a51a5b1c763f06e801a2dab2bcd24357121d5/browser_use_sdk-2.0.12.tar.gz", hash = "sha256:7b8c03af2d6c5a00f8033ddffc991a43df72937649c8b5e114766778074c94b4", size = 68107, upload-time = "2025-12-07T00:04:31.864Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/c3/5c/a1521820403c61e4164a4b4812bed34f21636439e00173efca5efc2a86b9/browser_use_sdk-2.0.12-py3-none-any.whl", hash = "sha256:f7ff6fd0fc84c2d73b84ab98fa8a282f617c12b5d1463dbe6dfdd7fa0323a832", size = 140869, upload-time = "2025-12-07T00:04:30.654Z" },
 ]
 
 [[package]]
@@ -1322,7 +1338,7 @@ test = [
 requires-dist = [
     { name = "anyio" },
     { name = "asyncio", specifier = ">=3.4.3" },
-    { name = "browser-use", specifier = ">=0.9.7" },
+    { name = "browser-use", specifier = ">=0.11.2" },
     { name = "click", specifier = ">=8.1.8" },
     { name = "httpx", specifier = ">=0.28.1" },
     { name = "langchain-openai", specifier = ">=0.3.1" },
