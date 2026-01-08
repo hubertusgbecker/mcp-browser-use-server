@@ -107,7 +107,7 @@ services:
       - no-new-privileges:true
     cap_add: []
     healthcheck:
-      test: ["CMD-SHELL", "curl -fsS http://127.0.0.1:${PROXY_PORT:-9000}/health || exit 0"]
+      test: ["CMD-SHELL", "curl -fsS http://127.0.0.1:9000/health || exit 0"]
       interval: 30s
       timeout: 10s
       retries: 3
