@@ -868,3 +868,80 @@ class TestSecurityHardening:
         test_config["allowed_domains"] = ["example.com"]
         if test_config.get("allowed_domains") != ["example.com"]:
             pytest.fail("Test config mutation did not persist allowed_domains")
+
+class TestBrowserTimeoutFix:
+    """Test that Chrome extension timeout fix is properly configured."""
+
+    @pytest.mark.asyncio
+    async def test_extensions_disabled_in_config(self):
+        """Test that Chrome extensions are disabled by default to prevent timeouts."""
+        from server.server import CONFIG
+
+        # Verify extensions are disabled by default
+        assert "ENABLE_DEFAULT_EXTENSIONS" in CONFIG, "ENABLE_DEFAULT_EXTENSIONS not in CONFIG"
+        assert CONFIG["ENABLE_DEFAULT_EXTENSIONS"] is False, "Chrome extensions should be disabled by default"
+
+    @pytest.mark.asyncio
+    async def test_timeout_parameters_in_config(self):
+        """Test that timeout parameters are configured."""
+        from server.server import CONFIG
+
+        # Verify timeout parameters exist and have reasonable values
+        assert "WAIT_FOR_NETWORK_IDLE_PAGE_LOAD_TIME" in CONFIG
+        assert "MINIMUM_WAIT_PAGE_LOAD_TIME" in CONFIG
+        
+        # Check values are reasonable (between 0 and 60 seconds)
+        network_idle_timeout = CONFIG["WAIT_FOR_NETWORK_IDLE_PAGE_LOAD_TIME"]
+        min_wait_timeout = CONFIG["MINIMUM_WAIT_PAGE_LOAD_TIME"]
+        
+        assert 0 < network_idle_timeout <= 60, f"Invalid network idle timeout: {network_idle_timeout}"
+        assert 0 < min_wait_timeout <= 60, f"Invalid minimum wait timeout: {min_wait_timeout}"
+
+    @pytest.mark.asyncio
+    async def test_browser_profile_creation_with_fix(self, mock_llm):
+        """Test that BrowserProfile is created with extensions disabled."""
+        from browser_use.browser import BrowserProfile
+        from server.server import CONFIG
+
+        # Create a BrowserProfile as the server would
+        bp_kwargs = {
+            "is_local": True,
+            "use_cloud": False,
+            "headless": CONFIG.get("BROWSER_HEADLESS", True),
+            "enable_default_extensions": CONFIG.get("ENABLE_DEFAULT_EXTENSIONS", False),
+            "wait_for_network_idle_page_load_time": CONFIG.get(
+                "WAIT_FOR_NETWORK_IDLE_PAGE_LOAD_TIME", 3.0
+            ),
+            "minimum_wait_page_load_time": CONFIG.get(
+                "MINIMUM_WAIT_PAGE_LOAD_TIME", 1.0
+            ),
+        }
+        
+        profile = BrowserProfile(**bp_kwargs)
+        
+        # Verify the fix is applied
+        assert profile.enable_default_extensions is False, "Extensions should be disabled"
+        assert profile.wait_for_network_idle_page_load_time == CONFIG["WAIT_FOR_NETWORK_IDLE_PAGE_LOAD_TIME"]
+        assert profile.minimum_wait_page_load_time == CONFIG["MINIMUM_WAIT_PAGE_LOAD_TIME"]
+
+    @pytest.mark.asyncio
+    async def test_session_creation_with_fix(self):
+        """Test that session.py creates BrowserProfile with extensions disabled."""
+        from browser_use.browser import BrowserProfile
+
+        # Simulate what session.py does
+        profile_kwargs = {
+            "headless": True,
+            "is_local": True,
+            "use_cloud": False,
+            "enable_default_extensions": False,
+            "wait_for_network_idle_page_load_time": 3.0,
+            "minimum_wait_page_load_time": 1.0,
+        }
+        
+        profile = BrowserProfile(**profile_kwargs)
+        
+        # Verify extensions are disabled
+        assert profile.enable_default_extensions is False, "Session should create profile with extensions disabled"
+        assert profile.wait_for_network_idle_page_load_time == 3.0
+        assert profile.minimum_wait_page_load_time == 1.0

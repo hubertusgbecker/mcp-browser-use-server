@@ -511,6 +511,17 @@ def init_configuration() -> Dict[str, Any]:
         "PATIENT_MODE": parse_bool_env("PATIENT", False),
         # OpenAI reverse proxy URL (empty string means use default OpenAI endpoint)
         "OPENAI_REVERSE_PROXY": os.environ.get("OPENAI_REVERSE_PROXY", ""),
+        # Browser timeout settings - Critical for preventing Chrome extension hangs
+        # Disable Chrome extensions by default as they cause timeout issues
+        "ENABLE_DEFAULT_EXTENSIONS": parse_bool_env("ENABLE_DEFAULT_EXTENSIONS", False),
+        # Wait time for network idle after page load (seconds)
+        "WAIT_FOR_NETWORK_IDLE_PAGE_LOAD_TIME": float(
+            os.environ.get("WAIT_FOR_NETWORK_IDLE_PAGE_LOAD_TIME", "3.0")
+        ),
+        # Minimum wait time after page load (seconds)
+        "MINIMUM_WAIT_PAGE_LOAD_TIME": float(
+            os.environ.get("MINIMUM_WAIT_PAGE_LOAD_TIME", "1.0")
+        ),
     }
 
     return config
@@ -762,12 +773,28 @@ async def run_browser_task_async(
                     "is_local": True,
                     "use_cloud": False,
                     "headless": CONFIG.get("BROWSER_HEADLESS", True),
+                    # CRITICAL FIX: Disable Chrome extensions to prevent timeout issues
+                    # Chrome extensions interfere with browser automation and cause hangs
+                    "enable_default_extensions": CONFIG.get("ENABLE_DEFAULT_EXTENSIONS", False),
+                    # Set reasonable timeout values for production use
+                    "wait_for_network_idle_page_load_time": CONFIG.get(
+                        "WAIT_FOR_NETWORK_IDLE_PAGE_LOAD_TIME", 3.0
+                    ),
+                    "minimum_wait_page_load_time": CONFIG.get(
+                        "MINIMUM_WAIT_PAGE_LOAD_TIME", 1.0
+                    ),
                 }
                 if chrome_path:
                     bp_kwargs["executable_path"] = chrome_path
 
                 browser_profile_for_agent = BrowserProfile(**bp_kwargs)
-        except Exception:
+                logger.info(
+                    f"Created BrowserProfile: headless={bp_kwargs['headless']}, "
+                    f"extensions_enabled={bp_kwargs['enable_default_extensions']}, "
+                    f"network_idle_timeout={bp_kwargs['wait_for_network_idle_page_load_time']}s"
+                )
+        except Exception as e:
+            logger.error(f"Failed to create BrowserProfile: {e}", exc_info=True)
             browser_profile_for_agent = None
 
         # Pass callbacks under both the newer `register_*` names and the

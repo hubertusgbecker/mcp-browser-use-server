@@ -37,6 +37,12 @@ async def create_session(
         "headless": headless,
         "is_local": True,
         "use_cloud": False,
+        # CRITICAL FIX: Disable Chrome extensions to prevent timeout issues
+        # Chrome extensions interfere with browser automation and cause hangs
+        "enable_default_extensions": False,
+        # Set reasonable timeout values for production use
+        "wait_for_network_idle_page_load_time": 3.0,  # 3 seconds for network idle
+        "minimum_wait_page_load_time": 1.0,  # 1 second minimum wait
     }
 
     if chrome_path:
@@ -44,6 +50,11 @@ async def create_session(
 
     profile = BrowserProfile(**profile_kwargs)
     session = BrowserSession(browser_profile=profile)
+
+    logger.info(
+        f"Creating BrowserSession with extensions_disabled=True, "
+        f"network_idle_timeout=3.0s"
+    )
 
     await session.start()
 

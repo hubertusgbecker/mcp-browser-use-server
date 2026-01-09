@@ -46,7 +46,12 @@ class TestCreateSession:
             # Assert
             assert result == mock_browser_session
             mock_profile_class.assert_called_once_with(
-                headless=True, is_local=True, use_cloud=False
+                headless=True,
+                is_local=True,
+                use_cloud=False,
+                enable_default_extensions=False,
+                wait_for_network_idle_page_load_time=3.0,
+                minimum_wait_page_load_time=1.0,
             )
             mock_session_class.assert_called_once_with(
                 browser_profile=mock_profile
@@ -87,6 +92,9 @@ class TestCreateSession:
                 headless=False,
                 is_local=True,
                 use_cloud=False,
+                enable_default_extensions=False,
+                wait_for_network_idle_page_load_time=3.0,
+                minimum_wait_page_load_time=1.0,
                 executable_path=chrome_path,
             )
 
