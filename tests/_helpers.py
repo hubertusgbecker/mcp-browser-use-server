@@ -67,7 +67,7 @@ def build_e2e_llm_and_config():
     model_name = os.getenv("LLM_MODEL", "gpt-5-mini")
 
     llm = ChatOpenAI(
-        model=model_name, api_key=SecretStr(api_key), temperature=0
+        model=model_name, api_key=SecretStr(api_key), temperature=0  # type: ignore[call-arg]
     )
     return llm, config
 

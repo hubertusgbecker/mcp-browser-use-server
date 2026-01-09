@@ -102,7 +102,7 @@ def execute_task(config, llm):
 
 **Verification:**
 ```bash
-uv run mypy src/ server/  # Must pass with no errors
+uvx ty check .  # Must pass with no errors
 ```
 
 ### 3. Async by Default (Required)
@@ -836,7 +836,7 @@ mcp-browser-use-server/
 2. Implement feature with type hints
 3. Add docstrings
 4. Run tests: `./run_tests.sh fast` (uses uv under the hood)
-5. Check types: `uv run mypy src/ server/`
+5. Check types: `uvx ty check .`
 6. Format code: `uv run ruff format .`
 7. Update documentation if needed
 
@@ -1590,7 +1590,7 @@ echo "LOG_LEVEL=DEBUG" >> .env
    
    # ✅ CORRECT
    ./run_tests.sh fast
-   uv run mypy src/ server/
+   uvx ty check .
    git commit -m "feat: Add feature with tests"
    ```
 
@@ -1638,7 +1638,7 @@ uv run pytest tests/test_server.py::test_name -vv  # Specific test
 # Code Quality
 uv run ruff format .               # Format code
 uv run ruff check .                # Lint code
-uv run mypy src/ server/           # Type check
+uvx ty check .                 # Type check
 
 # Building & Installing
 uv build                           # Build package
@@ -1707,7 +1707,7 @@ git checkout -b feature/my-feature
 
 # Make changes and test
 ./run_tests.sh fast
-uv run mypy src/ server/
+uvx ty check .
 
 # Commit with conventional message
 git commit -m "feat: Add new browser automation feature"
@@ -1766,7 +1766,7 @@ uv run python -c "from server.server import init_configuration; print(init_confi
 ### Code Review Checklist
 
 Before suggesting or approving code:
-- [ ] Type hints on all functions (verify with `uv run mypy`)
+- [ ] Type hints on all functions (verify with `uvx ty check .`)
 - [ ] Docstrings on public APIs (Google style)
 - [ ] Tests added/updated (run `./run_tests.sh fast`)
 - [ ] No hardcoded credentials or secrets
@@ -1859,7 +1859,7 @@ uv run pytest tests/ -v          # Verbose tests
 # Code Quality
 uv run ruff check .              # Lint code
 uv run ruff format .             # Format code
-uv run mypy src/ server/         # Type check
+uvx ty check .               # Type check
 
 # Building
 uv build                         # Build package

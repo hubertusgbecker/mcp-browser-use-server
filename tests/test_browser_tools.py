@@ -903,9 +903,10 @@ class TestBrowserTimeoutFix:
         from browser_use.browser import BrowserProfile
 
         from server.server import CONFIG
+        from typing import Any
 
         # Create a BrowserProfile as the server would
-        bp_kwargs = {
+        bp_kwargs: dict[str, Any] = {
             "is_local": True,
             "use_cloud": False,
             "headless": CONFIG.get("BROWSER_HEADLESS", True),
@@ -929,9 +930,10 @@ class TestBrowserTimeoutFix:
     async def test_session_creation_with_fix(self):
         """Test that session.py creates BrowserProfile with extensions disabled."""
         from browser_use.browser import BrowserProfile
+        from typing import Any
 
         # Simulate what session.py does
-        profile_kwargs = {
+        profile_kwargs: dict[str, Any] = {
             "headless": True,
             "is_local": True,
             "use_cloud": False,

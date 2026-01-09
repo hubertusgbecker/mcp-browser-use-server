@@ -4,7 +4,7 @@ import logging
 try:
     from click.testing import CliRunner
 except Exception:  # pragma: no cover - skip if click missing
-    CliRunner = None
+    CliRunner = None  # type: ignore[assignment]
 
 import pytest
 

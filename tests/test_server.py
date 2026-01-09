@@ -46,7 +46,7 @@ def test_sse_route_and_messages_mount_registered(mock_llm):
     app = create_starlette_app_with_sse()
 
     # Check that /sse route exists
-    paths = {route.path for route in app.routes}
+    paths = {getattr(route, 'path', '') for route in app.routes}
     if "/sse" not in paths:
         pytest.fail("/sse route not registered on the app")
     # Check that the messages mount exists

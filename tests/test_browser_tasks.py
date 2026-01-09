@@ -104,7 +104,7 @@ class TestBrowserTaskExecution:
 
                 # Test step_callback with dict format (lines 617-620)
                 mock_agent_output = {"step": 1}
-                captured_step_callback(mock_agent_output)
+                captured_step_callback(mock_agent_output)  # type: ignore[misc]
 
                 assert task_store[task_id]["progress"]["current_step"] == 1
                 assert len(task_store[task_id]["progress"]["steps"]) > 0
@@ -148,7 +148,7 @@ class TestBrowserTaskExecution:
 
                 # Call with args format: (?, agent_output, step_number)
                 mock_agent_output = MagicMock()
-                captured_step_callback(None, mock_agent_output, 2)
+                captured_step_callback(None, mock_agent_output, 2)  # type: ignore[misc]
 
                 assert task_store[task_id]["progress"]["current_step"] == 2
 
@@ -189,7 +189,7 @@ class TestBrowserTaskExecution:
                 )
 
                 # Call with kwargs format
-                captured_step_callback(step_number=3, agent_output=MagicMock())
+                captured_step_callback(step_number=3, agent_output=MagicMock())  # type: ignore[misc]
 
                 assert task_store[task_id]["progress"]["current_step"] == 3
 
@@ -233,7 +233,7 @@ class TestBrowserTaskExecution:
 
                 # Call without step number - should log warning and return early
                 initial_step = task_store[task_id]["progress"]["current_step"]
-                captured_step_callback(agent_output=MagicMock())
+                captured_step_callback(agent_output=MagicMock())  # type: ignore[misc]
 
                 # Step should not have been updated
                 assert (
@@ -284,7 +284,7 @@ class TestBrowserTaskExecution:
                 mock_agent_output.current_state = MagicMock()
                 mock_agent_output.current_state.next_goal = "Test goal"
 
-                captured_step_callback(
+                captured_step_callback(  # type: ignore[misc]
                     {"step": 1}, agent_output=mock_agent_output
                 )
 
@@ -383,7 +383,7 @@ class TestBrowserTaskExecution:
                 )
 
                 # Test with list
-                await captured_done_callback([1, 2])
+                await captured_done_callback([1, 2])  # type: ignore[misc]
 
                 # Should complete successfully
                 steps = task_store[task_id]["progress"]["steps"]

@@ -348,7 +348,7 @@ uv run black .
 uv run isort .
 
 # Type checking
-uv run mypy src/ server/
+uvx ty check .
 
 # Run tests during development
 uv run pytest tests/ -v
@@ -402,7 +402,7 @@ Contributions are welcome! Please follow these guidelines:
 - **Test Coverage**: Maintain >95% coverage
 - **Type Hints**: All functions must have type annotations
 - **Documentation**: Docstrings for all public APIs
-- **Linting**: Code must pass ruff and mypy checks
+- **Linting**: Code must pass ruff and ty checks
 - **Formatting**: Use black and isort for consistent formatting
 
 ## Example Usage

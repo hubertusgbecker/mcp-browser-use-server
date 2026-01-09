@@ -81,7 +81,7 @@ async def my_function(
 **Requirements:**
 - Use Pydantic v2 models for all schemas, configs, and data validation
 - All public functions need type hints
-- Run `uv run mypy src/ server/` before commits
+- Run `uvx ty check .` before commits
 - Use `Optional[T]`, `Union[T1, T2]`, `List[T]`, `Dict[K, V]`
 
 ### 3. Async by Default
@@ -106,7 +106,7 @@ async def test_my_feature():
 # ALWAYS run before making PRs
 uv run ruff format .
 uv run ruff check .
-uv run mypy src/ server/
+uvx ty check .
 ./run_tests.sh fast
 ```
 
@@ -172,7 +172,7 @@ This project provides a **production-ready MCP (Model Context Protocol) server**
 - **uv**: Fast Python package manager (**REQUIRED**)
 - **pytest**: Testing framework with async support
 - **ruff**: Lightning-fast linter and formatter
-- **mypy**: Static type checker
+- **ty (via uvx)**: Fast static type checker
 - **Docker + docker-compose**: Containerization
 - **Context7 MCP Tool**: AI code generation assistance
 
@@ -820,12 +820,12 @@ uv run ruff format .
 uv run ruff check .
 
 # Type checking
-uv run mypy src/ server/
+uvx ty check .
 
 # Run all checks (recommended before PR)
 uv run ruff format . && \
 uv run ruff check . && \
-uv run mypy src/ server/ && \
+uvx ty check . && \
 ./run_tests.sh fast
 ```
 

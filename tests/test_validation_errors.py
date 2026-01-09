@@ -22,10 +22,10 @@ class TestValidationErrors:
             )
         )
 
-        response_text = result.root.content[0].text
+        response_text = result.root.content[0].text  # type: ignore[attr-defined,union-attr]
         # MCP validation errors can be plain text or JSON
         assert "url" in response_text.lower()
-        assert result.root.isError or "error" in response_text.lower()
+        assert result.root.isError or "error" in response_text.lower()  # type: ignore[attr-defined]
 
     @pytest.mark.asyncio
     async def test_browser_click_missing_session_id(
@@ -43,9 +43,9 @@ class TestValidationErrors:
             )
         )
 
-        response_text = result.root.content[0].text
+        response_text = result.root.content[0].text  # type: ignore[attr-defined,union-attr]
         assert "session" in response_text.lower()
-        assert result.root.isError or "error" in response_text.lower()
+        assert result.root.isError or "error" in response_text.lower()  # type: ignore[attr-defined]
 
     @pytest.mark.asyncio
     async def test_browser_click_missing_index(self, mock_llm, cleanup_tasks):
@@ -61,12 +61,12 @@ class TestValidationErrors:
             )
         )
 
-        response_text = result.root.content[0].text
+        response_text = result.root.content[0].text  # type: ignore[attr-defined,union-attr]
         assert (
             "index" in response_text.lower()
             or "element" in response_text.lower()
         )
-        assert result.root.isError or "error" in response_text.lower()
+        assert result.root.isError or "error" in response_text.lower()  # type: ignore[attr-defined]
 
     @pytest.mark.asyncio
     async def test_browser_extract_missing_session_id(
@@ -85,9 +85,9 @@ class TestValidationErrors:
             )
         )
 
-        response_text = result.root.content[0].text
+        response_text = result.root.content[0].text  # type: ignore[attr-defined,union-attr]
         assert "session" in response_text.lower()
-        assert result.root.isError or "error" in response_text.lower()
+        assert result.root.isError or "error" in response_text.lower()  # type: ignore[attr-defined]
 
     @pytest.mark.asyncio
     async def test_browser_extract_missing_instruction(
@@ -106,9 +106,9 @@ class TestValidationErrors:
             )
         )
 
-        response_text = result.root.content[0].text
+        response_text = result.root.content[0].text  # type: ignore[attr-defined,union-attr]
         assert "instruction" in response_text.lower()
-        assert result.root.isError or "error" in response_text.lower()
+        assert result.root.isError or "error" in response_text.lower()  # type: ignore[attr-defined]
 
     @pytest.mark.asyncio
     async def test_browser_close_session_missing_id(
@@ -126,9 +126,9 @@ class TestValidationErrors:
             )
         )
 
-        response_text = result.root.content[0].text
+        response_text = result.root.content[0].text  # type: ignore[attr-defined,union-attr]
         assert "session" in response_text.lower()
-        assert result.root.isError or "error" in response_text.lower()
+        assert result.root.isError or "error" in response_text.lower()  # type: ignore[attr-defined]
 
     @pytest.mark.asyncio
     async def test_get_task_status_missing_id(self, mock_llm, cleanup_tasks):
@@ -144,9 +144,9 @@ class TestValidationErrors:
             )
         )
 
-        response_text = result.root.content[0].text
+        response_text = result.root.content[0].text  # type: ignore[attr-defined,union-attr]
         assert "task" in response_text.lower()
-        assert result.root.isError or "error" in response_text.lower()
+        assert result.root.isError or "error" in response_text.lower()  # type: ignore[attr-defined]
 
     @pytest.mark.asyncio
     async def test_browser_get_state_missing_both_ids(
@@ -166,7 +166,7 @@ class TestValidationErrors:
 
         # browser_get_state without IDs might return empty state or error
         # Just verify it doesn't crash
-        assert len(result.root.content) > 0
+        assert len(result.root.content) > 0  # type: ignore[attr-defined]
 
 
 class TestTaskCleanup:
@@ -230,11 +230,11 @@ class TestResourceProvider:
         result = await server.request_handlers[types.ReadResourceRequest](
             types.ReadResourceRequest(
                 params=types.ReadResourceRequestParams(
-                    uri="resource://browser_tasks"
+                    uri="resource://browser_tasks"  # type: ignore[arg-type]
                 )
             )
         )
 
         # Should return content
-        assert len(result.root.contents) > 0
-        assert result.root.contents[0].text is not None
+        assert len(result.root.contents) > 0  # type: ignore[attr-defined]
+        assert result.root.contents[0].text is not None  # type: ignore[attr-defined,union-attr]

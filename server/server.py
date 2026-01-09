@@ -2681,9 +2681,9 @@ def main(
     # Assign once to avoid redefinition issues with type checkers.
     _anyio = None
     try:
-        import anyio as _anyio  # type: ignore
+        import anyio as _anyio  # type: ignore[assignment,no-redef]
     except Exception:
-        _anyio = None
+        _anyio = None  # type: ignore[assignment]
 
     async def _messages_asgi_app(scope, receive, send):
         """ASGI adapter around `sse.handle_post_message`.
@@ -2760,7 +2760,7 @@ def main(
             )
 
         # Start background task cleanup
-        asyncio.create_task(app.cleanup_old_tasks())
+        asyncio.create_task(app.cleanup_old_tasks())  # type: ignore[attr-defined]
 
         # Ensure a compatible `uvx` executable is available for subprocess
         # invocations performed by browser-use when installing or launching

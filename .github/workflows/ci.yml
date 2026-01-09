@@ -38,6 +38,6 @@ jobs:
           # Prefer installing package test extras; if that fails, install pytest and known plugins
           uv pip install .[test] || uv pip install pytest pytest-cov pytest-asyncio
       - name: Type check
-        run: uv run mypy src/ server/ || true
+        run: uvx ty check . || true
       - name: Run tests
         run: uv run pytest -q

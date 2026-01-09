@@ -34,7 +34,7 @@ class TestDockerIntegration:
     )
     def test_docker_container_running(self):
         """Test that Docker container can start and is accessible."""
-        result = subprocess.run(
+        result = subprocess.run(  # type: ignore[call-overload]
             [
                 docker_path,
                 "ps",
@@ -106,7 +106,7 @@ asyncio.run(run_task())
 """
 
         try:
-            result = subprocess.run(
+            result = subprocess.run(  # type: ignore[call-overload]
                 [
                     docker_path,
                     "exec",

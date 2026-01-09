@@ -77,7 +77,7 @@ def integration_server(request):
 
                 # Intentionally start the local test server for integration tests.
                 # Use absolute executable path to satisfy Bandit checks.
-                _integration_server_proc = subprocess.Popen(  # nosec: B603
+                _integration_server_proc = subprocess.Popen(  # nosec: B603  # type: ignore[call-overload]
                     [uv_path, "run", "server", "--port", str(HOST_PORT)],
                     stdout=logfile,
                     stderr=subprocess.STDOUT,

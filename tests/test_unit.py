@@ -311,8 +311,8 @@ class TestChatOpenAIAdapter:
 
         from server.server import ChatOpenAIAdapter
 
-        llm = ChatOpenAI(model="gpt-4o-mini", api_key="test-key")
-        adapter = ChatOpenAIAdapter(llm)
+        llm = ChatOpenAI(model="gpt-4o-mini", api_key="test-key")  # type: ignore[call-arg]
+        adapter = ChatOpenAIAdapter(llm)  # type: ignore[arg-type]
 
         assert adapter._llm is llm
 
@@ -328,8 +328,8 @@ class TestChatOpenAIAdapter:
 
         from server.server import ChatOpenAIAdapter
 
-        llm = ChatOpenAI(model="gpt-4o-mini", api_key="test-key")
-        adapter = ChatOpenAIAdapter(llm)
+        llm = ChatOpenAI(model="gpt-4o-mini", api_key="test-key")  # type: ignore[call-arg]
+        adapter = ChatOpenAIAdapter(llm)  # type: ignore[arg-type]
 
         # Should return provider from underlying LLM or "openai" as default
         provider = adapter.provider
@@ -348,8 +348,8 @@ class TestChatOpenAIAdapter:
 
         from server.server import ChatOpenAIAdapter
 
-        llm = ChatOpenAI(model="gpt-4o-mini", api_key="test-key")
-        adapter = ChatOpenAIAdapter(llm)
+        llm = ChatOpenAI(model="gpt-4o-mini", api_key="test-key")  # type: ignore[call-arg]
+        adapter = ChatOpenAIAdapter(llm)  # type: ignore[arg-type]
 
         # Access attribute through delegation
         # model_name should be delegated to underlying LLM
@@ -392,8 +392,8 @@ class TestChatOpenAIAdapter:
 
         from server.server import ChatOpenAIAdapter
 
-        llm = ChatOpenAI(model="gpt-4o-mini", api_key="test-key")
-        adapter = ChatOpenAIAdapter(llm)
+        llm = ChatOpenAI(model="gpt-4o-mini", api_key="test-key")  # type: ignore[call-arg]
+        adapter = ChatOpenAIAdapter(llm)  # type: ignore[arg-type]
 
         # Should return model from underlying LLM
         model = adapter.model
@@ -1755,7 +1755,7 @@ class TestStepCallback:
         # Simulate what step_callback does
         task_store[task_id]["progress"]["current_step"] = step_number
         task_store[task_id]["progress"]["total_steps"] = max(
-            task_store[task_id]["progress"]["total_steps"], step_number
+            task_store[task_id]["progress"]["total_steps"], step_number  # type: ignore[type-var]
         )
 
         assert task_store[task_id]["progress"]["current_step"] == 3
@@ -1892,12 +1892,16 @@ class TestChatOpenAIAdapterEdgeCases:
         """Test normalization of objects with role and content attributes."""
         from server.server import ChatOpenAIAdapter
 
+        from browser_use.llm.openai.chat import ChatOpenAI as BrowserUseChatOpenAI
+        from unittest.mock import Mock
+
         class MockMessage:
             def __init__(self):
                 self.role = "user"
                 self.content = "Test message"
 
-        ChatOpenAIAdapter("test-key")
+        mock_llm = Mock(spec=BrowserUseChatOpenAI)
+        ChatOpenAIAdapter(mock_llm)
 
         # The _normalize function is internal, but we can test through ainvoke
         # which uses normalization internally

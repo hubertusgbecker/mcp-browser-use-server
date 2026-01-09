@@ -74,7 +74,7 @@
 ### 5. Code Quality
 - Type hints for all Python code
 - Comprehensive docstrings
-- Linting with ruff, mypy, bandit
+- Linting with ruff, ty, bandit
 - Pre-commit hooks for consistency
 - No code duplication (checked via jscpd)
 
@@ -214,7 +214,7 @@ feat: wire up auth components
 - [ ] All TDD verification items above ✅
 - [ ] All tests passing (unit, integration, e2e, docker)
 - [ ] Test coverage ≥ 80% overall, 100% for new code
-- [ ] Linters passing (ruff, mypy, bandit, hadolint, etc.)
+- [ ] Linters passing (ruff, ty, bandit, hadolint, etc.)
 - [ ] Security scans clean
 - [ ] Documentation updated
 - [ ] CHANGELOG updated (if applicable)
@@ -239,7 +239,7 @@ feat: wire up auth components
 ### Development Dependencies
 - pytest for testing
 - ruff for linting
-- mypy for type checking
+- ty for type checking
 - uv for package management
 
 ### Infrastructure
