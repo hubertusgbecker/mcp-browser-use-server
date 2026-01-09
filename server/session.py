@@ -52,8 +52,8 @@ async def create_session(
     session = BrowserSession(browser_profile=profile)
 
     logger.info(
-        f"Creating BrowserSession with extensions_disabled=True, "
-        f"network_idle_timeout=3.0s"
+        "Creating BrowserSession with extensions_disabled=True, "
+        "network_idle_timeout=3.0s"
     )
 
     await session.start()

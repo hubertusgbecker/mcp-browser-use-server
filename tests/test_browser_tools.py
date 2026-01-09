@@ -889,11 +889,11 @@ class TestBrowserTimeoutFix:
         # Verify timeout parameters exist and have reasonable values
         assert "WAIT_FOR_NETWORK_IDLE_PAGE_LOAD_TIME" in CONFIG
         assert "MINIMUM_WAIT_PAGE_LOAD_TIME" in CONFIG
-        
+
         # Check values are reasonable (between 0 and 60 seconds)
         network_idle_timeout = CONFIG["WAIT_FOR_NETWORK_IDLE_PAGE_LOAD_TIME"]
         min_wait_timeout = CONFIG["MINIMUM_WAIT_PAGE_LOAD_TIME"]
-        
+
         assert 0 < network_idle_timeout <= 60, f"Invalid network idle timeout: {network_idle_timeout}"
         assert 0 < min_wait_timeout <= 60, f"Invalid minimum wait timeout: {min_wait_timeout}"
 
@@ -901,6 +901,7 @@ class TestBrowserTimeoutFix:
     async def test_browser_profile_creation_with_fix(self, mock_llm):
         """Test that BrowserProfile is created with extensions disabled."""
         from browser_use.browser import BrowserProfile
+
         from server.server import CONFIG
 
         # Create a BrowserProfile as the server would
@@ -916,9 +917,9 @@ class TestBrowserTimeoutFix:
                 "MINIMUM_WAIT_PAGE_LOAD_TIME", 1.0
             ),
         }
-        
+
         profile = BrowserProfile(**bp_kwargs)
-        
+
         # Verify the fix is applied
         assert profile.enable_default_extensions is False, "Extensions should be disabled"
         assert profile.wait_for_network_idle_page_load_time == CONFIG["WAIT_FOR_NETWORK_IDLE_PAGE_LOAD_TIME"]
@@ -938,9 +939,9 @@ class TestBrowserTimeoutFix:
             "wait_for_network_idle_page_load_time": 3.0,
             "minimum_wait_page_load_time": 1.0,
         }
-        
+
         profile = BrowserProfile(**profile_kwargs)
-        
+
         # Verify extensions are disabled
         assert profile.enable_default_extensions is False, "Session should create profile with extensions disabled"
         assert profile.wait_for_network_idle_page_load_time == 3.0
