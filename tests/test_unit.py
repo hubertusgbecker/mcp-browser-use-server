@@ -1755,7 +1755,8 @@ class TestStepCallback:
         # Simulate what step_callback does
         task_store[task_id]["progress"]["current_step"] = step_number
         task_store[task_id]["progress"]["total_steps"] = max(
-            task_store[task_id]["progress"]["total_steps"], step_number  # type: ignore[type-var]
+            task_store[task_id]["progress"]["total_steps"],
+            step_number,  # type: ignore[type-var]
         )
 
         assert task_store[task_id]["progress"]["current_step"] == 3
@@ -1890,10 +1891,13 @@ class TestChatOpenAIAdapterEdgeCases:
     @pytest.mark.asyncio
     async def test_normalize_object_with_role_and_content(self):
         """Test normalization of objects with role and content attributes."""
-        from server.server import ChatOpenAIAdapter
-
-        from browser_use.llm.openai.chat import ChatOpenAI as BrowserUseChatOpenAI
         from unittest.mock import Mock
+
+        from browser_use.llm.openai.chat import (
+            ChatOpenAI as BrowserUseChatOpenAI,
+        )
+
+        from server.server import ChatOpenAIAdapter
 
         class MockMessage:
             def __init__(self):

@@ -102,12 +102,33 @@ async def test_my_feature():
 
 ### 4. Pre-commit & Code Quality
 
+**CRITICAL: Run these commands before EVERY commit:**
+
 ```bash
-# ALWAYS run before making PRs
-uv run ruff format .
-uv run ruff check .
-uvx ty check .
-./run_tests.sh fast
+# Required pre-commit checks (must pass before committing)
+uv run ruff format .        # Auto-format code
+uv run ruff check --fix .   # Fix auto-fixable linting issues
+uvx ty check .              # Type check (0 errors required)
+./run_tests.sh fast         # Run test suite
+
+# Or run pre-commit hooks manually
+git add -A
+pre-commit run --all-files  # Runs all configured hooks
+```
+
+**Why This Matters:**
+- CI/CD will reject commits that fail these checks
+- Prevents broken builds and failed GitHub Actions
+- Maintains code quality standards across the project
+- Saves time by catching issues locally before pushing
+
+**Pre-commit Hooks:**
+The project uses pre-commit hooks that automatically run on `git commit`. If you haven't installed them:
+
+```bash
+# Install pre-commit hooks (one-time setup)
+uv pip install pre-commit
+pre-commit install
 ```
 
 ### 5. Documentation Standards

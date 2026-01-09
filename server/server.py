@@ -513,7 +513,9 @@ def init_configuration() -> Dict[str, Any]:
         "OPENAI_REVERSE_PROXY": os.environ.get("OPENAI_REVERSE_PROXY", ""),
         # Browser timeout settings - Critical for preventing Chrome extension hangs
         # Disable Chrome extensions by default as they cause timeout issues
-        "ENABLE_DEFAULT_EXTENSIONS": parse_bool_env("ENABLE_DEFAULT_EXTENSIONS", False),
+        "ENABLE_DEFAULT_EXTENSIONS": parse_bool_env(
+            "ENABLE_DEFAULT_EXTENSIONS", False
+        ),
         # Wait time for network idle after page load (seconds)
         "WAIT_FOR_NETWORK_IDLE_PAGE_LOAD_TIME": float(
             os.environ.get("WAIT_FOR_NETWORK_IDLE_PAGE_LOAD_TIME", "3.0")
@@ -775,7 +777,9 @@ async def run_browser_task_async(
                     "headless": CONFIG.get("BROWSER_HEADLESS", True),
                     # CRITICAL FIX: Disable Chrome extensions to prevent timeout issues
                     # Chrome extensions interfere with browser automation and cause hangs
-                    "enable_default_extensions": CONFIG.get("ENABLE_DEFAULT_EXTENSIONS", False),
+                    "enable_default_extensions": CONFIG.get(
+                        "ENABLE_DEFAULT_EXTENSIONS", False
+                    ),
                     # Set reasonable timeout values for production use
                     "wait_for_network_idle_page_load_time": CONFIG.get(
                         "WAIT_FOR_NETWORK_IDLE_PAGE_LOAD_TIME", 3.0
